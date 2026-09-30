@@ -2,7 +2,7 @@
 
 Version 1.0.0 · WPI student handoff · Python 3.12+
 
-This project rebuilds a traceable recreation inventory, descriptive analyses, Excel workbooks, GIS layers, charts, interactive and static maps, and a versioned release from current MAPC inputs. Original root files remain unchanged. Start with `output/reports/QC_report.html` to understand each run's coverage and limitations.
+This project rebuilds a traceable recreation inventory, descriptive analyses, Excel workbooks, GIS layers, charts, interactive and static maps, and a versioned release from current MAPC inputs. Authoritative source bytes are preserved in `input/` and `reference/`; redundant loose root copies were removed only after matching SHA-256 checksums. Start with `output/reports/QC_report.html` to understand each analytical run's coverage and limitations.
 
 ## Quick start on Windows
 
@@ -21,6 +21,16 @@ python -m src.pipeline
 ```
 
 The equivalent PowerShell launcher is `powershell -ExecutionPolicy Bypass -File .\run_pipeline.ps1`. All data paths are relative to this project; moving the project does not require editing Python source.
+
+## macOS / Linux and opening the management map
+
+Run `sh ./run_pipeline.sh` to build the complete project. The launcher resolves its own folder, uses `.venv/bin/python`, creates the environment if needed, and installs requirements only when its successful-install checksum stamp is missing or changed. It forwards arguments to **`python -m src.pipeline`**; do not execute `src/pipeline.py` directly. Python 3.12+ is required. The launcher has been syntax- and stub-tested on Windows Bash; native macOS/Linux execution has not been tested.
+
+For an existing saved map, activate the environment and run **`python -m src.serve_map`**. This opens the map through a server bound only to `127.0.0.1`, allowing the browser to send the HTTP Referer required by the street-map provider. No inventory is uploaded. Windows can use `.venv\Scripts\python -m src.serve_map`; macOS/Linux can use `.venv/bin/python -m src.serve_map`. Stop the server with Ctrl+C.
+
+Opening `output/maps/MAPC_access_map.html` directly works in local/offline mode. Its inventory, review queue, evidence, GIS and transit overlays are embedded. Street labels and online street tiles require the local HTTP viewer and an internet connection.
+
+To update **only presentation**, run `python -m src.rebuild_map`. This verifies the successful saved analytical manifest, source, cleaned data and display-layer checksums, then renders only the HTML and map build reports. It does not run the parser, spatial analysis, transit acquisition, workbooks, charts, static map, release packaging or full test suite. A separate `output/reports/map_build_manifest.json` links the UI build to its original analytical manifest. Historical releases and `run_manifest.json` remain unchanged; their original HTML/config hashes describe their original build. Current map test evidence is `output/reports/map_management_test_results.json`.
 
 ## Updating the inventory
 
@@ -59,7 +69,7 @@ Do not use root-ingest after updating only `input/assets/` while leaving an olde
 
 The current asset CSV is authoritative for recorded MAPC values. Its schema and content identify it, rather than its filename alone. Local MAPC ZIPs supply geometry. Official MBTA GTFS supplies independently calculated transit proximity. Field guides clarify definitions. Previous fact-check audits provide evidence to re-evaluate; they never overwrite the current record simply because a name matches.
 
-`bootstrap/root_inventory.csv` was written before copying or transformation. It records every original root file's name, size, checksum, classification and destination. `bootstrap/bootstrap_report.html` explains placement. All original root files remain in place, all input copies preserve their filenames, and no transformation rewrites a raw file. Additional ingests create timestamped inventories rather than replacing the original inventory.
+`bootstrap/root_inventory.csv` was written before copying or transformation. It records every original root file's name, size, checksum, classification and destination. `bootstrap/bootstrap_report.html` explains initial placement. The subsequent `bootstrap/root_cleanup_report.csv` and `.json` record removal of 13 redundant loose files after each source/destination pair matched both each other and the original inventory. No mismatches occurred. Original bytes and filenames remain in organized destinations: one asset CSV in `input/assets/`, four geometry ZIPs in `input/gis/`, four base-column references in `input/gis_reference/`, two guides in `reference/field_guides/`, and two audits in `reference/previous_audits/`. `input/input_bak` was absent. Historical bootstrap evidence was not rewritten. Additional ingests create timestamped inventories rather than replacing the original inventory. See `notes/project_organization.md` for the cleanup, ignored-folder placeholders and launcher checks.
 
 ## Data contract and traceability
 
@@ -112,11 +122,37 @@ Web layers use topology-preserving Douglas–Peucker simplification in projected
 ## Map encoding and reliability
 
 - Marker **size** defaults to `attribute_count`, labeled **Number of recorded MAPC attributes/features**. Change `map.size_metric` to `amenity_count` for the documented physical-amenity subset. Fixed thresholds and radii are configured for comparable future releases.
-- Marker **color** shows the final transportation profile: transit + free parking, transit only, free parking only, neither, or unknown/unresolved. Colors are stable and do not use a red/green contrast.
-- Hover shows site, asset, municipality, attributes, amenities and activities. Click adds access evidence, validation, transit/network distances and source traceability.
+- The default **Inventory management** view colors records by transparent workflow/QC rules. **Transportation profile** preserves the final audited transportation encoding. Its colors are blue `#0077C8` (transit + free parking), amber `#FFB000` (transit only), magenta `#C2187A` (free parking only), charcoal `#3D4650` (neither), and `#AAB4BE` (unknown/unresolved).
+- Attribute bins remain 0–2, 3–5, 6–8, 9–11 and 12+. Radii are now 5, 8, 12, 17 and 23 CSS pixels, drawn at those exact sizes in the legend. Field-validated markers use solid outlines; unfinished markers are dashed and less opaque. The validated layer starts on and the unfinished layer starts off. Operational queue selections can reveal relevant unfinished records.
+- Hover shows site, asset, municipality, separate field/staff states and complete feature, amenity and activity lists in a responsive wide card. Click opens a right-side details drawer (bottom sheet on small screens) with the same inventory, separate source/final access values, evidence, distances, exact issue reasons, site progress and collapsed provenance. Nearby coincident records are individually selectable. No values are edited.
 - Toggle existing bike facilities, existing shared-use paths, public walking trails, unvalidated assets, transit stops and available transit route modes independently. Transit/GIS layers are initially off for readability.
 
-Leaflet is bundled into the HTML. Esri street tiles are an optional online basemap. If tiles fail, local assets and GIS layers still initialize, a visible status explains tile failures, and the Local data (offline) choice works. The static PNG/SVG uses local geometry and never needs online tiles. Map print CSS retains title, legend and credits. The map is a local deliverable; this project does not publish it to a public service.
+Leaflet and local data are bundled into the HTML. The full-viewport map has floating controls, an extent-based Home button, collapsible legend and compact About/methods panel. Fractional zoom uses `zoomSnap=0.25`, `zoomDelta=0.25`, `wheelPxPerZoomLevel=120`, `wheelDebounceTime=40`, and zoom/fade/marker animations. No Apple Maps resources are used.
+
+Online streets use **OpenStreetMap Standard** (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`) with visible linked © OpenStreetMap contributors attribution. Normal browser caching and Referer behavior are retained; there is no tile downloader or offline tile archive. Use is subject to the [OSMF tile policy](https://operations.osmfoundation.org/policies/tiles/) and [OSM copyright/license](https://www.openstreetmap.org/copyright). CARTO was considered, but its [current service terms](https://www.carto.com/legal/basemap-terms/) require an issued API key. The configurable provider can be changed for an institutional licensed service later. A tile failure triggers a temporary warning and local fallback; normal successful loading shows no developer status banner.
+
+The static PNG/SVG retains the earlier analytical release styling and was not regenerated for this UI change. It uses local geometry and never needs online tiles. This project does not publish the inventory to a public service.
+
+## Inventory management rules
+
+This read-only map supports internal inventory QA and fieldwork review. It has no park recommendations, ranking, routing, activity discovery filters or overall accessibility/quality score. Unknown access evidence remains Unknown; Free Entry / Parking retains the combined source concept; the 0.5-mile transit rule and full-line GIS calculations remain unchanged.
+
+| Queue / status | Exact display rule |
+|---|---|
+| Field collection incomplete | `field_validated` is not explicitly true |
+| Staff review pending | `staff_reviewed` is not explicitly true, independently of field status |
+| Missing usable coordinates | `coordinate_usable` is not explicitly true |
+| Access conflict / unresolved | An access verification status is one of the explicit unresolved/conflict statuses in `notes/management_rules.md`; plain Unknown and resolved corrections alone do not qualify |
+| Source / data-quality warning | Current-source schema row diagnostic, nonempty record issue, non-unique duplicate status, or explicit usable-coordinate warning |
+| Changed since previous snapshot | A change row belongs to the current run's checksummed comparison with an identified previous input; no comparison is fabricated |
+| Multiple issues | At least two distinct issue categories apply; all reasons remain visible |
+| No known management issues | None of those issue categories applies; this is about recorded workflow/evidence, not place quality |
+
+The summary and queue are calculated from all accepted records. Search covers site, asset and municipality for record lookup. Selecting a queue reveals its affected mapped records and retains unmapped records in the list. Queue CSV downloads are labelled management/QC extracts, not authoritative datasets. Records without usable coordinates expose identity, validation, staff review, omission reason and full details without inventing positions.
+
+Site progress reconciles every accepted member against the existing site dataset: all field validated = fully field complete; some = partial; none = not started. Staff review counts and the need for review remain separate. Percentages mean field/staff coverage only. Source value, audited/final value, verification, evidence and evidence source remain separate for every access dimension. Snapshot metadata identifies the analytical run, source hash, MBTA snapshot, GIS sources and QC state. No valid previous-input comparison is loaded for the current snapshot, so change review is disabled with an explanation. Future verified comparisons can show additions, removals, coordinate/list/access/validation changes and review-only rename candidates.
+
+See `notes/management_rules.md`, `notes/map_validation.md`, and `notes/MAP_HANDOFF.md` for detailed rules, targeted validation and this revision's handoff.
 
 ## Analysis and statistical limits
 
@@ -149,7 +185,7 @@ python -m src.pipeline --clean-rebuild
 python -m src.pipeline --previous "reference/project_docs/older_assets.csv"
 ```
 
-Normal runs execute unit/integration tests and a real browser smoke test. The browser checks initialization, counts, tooltips, popups, GIS/transit/validation layer toggles, JavaScript errors and offline reload, and saves screenshots. If no supported browser is available, QC states that limitation instead of claiming a pass. An actual test failure blocks release creation.
+Normal runs execute unit/integration tests and a real browser smoke test. The browser checks initialization, counts, tooltips, the management drawer/queue, GIS/transit/validation layer toggles, JavaScript errors and offline reload, and saves screenshots. If no supported browser is available, QC states that limitation instead of claiming a pass. An actual test failure blocks release creation. Presentation-only revisions run relevant unit and browser tests without repeating the analytical build. Historical full-build test results remain distinct from current UI test reports.
 
 Clean rebuild moves previous outputs into a timestamped `cache/rebuilds/` folder, regenerates from input/reference/config/source and the frozen transit cache, then compares canonical CSV checksums. Output timestamps, Excel archive metadata and binary GIS internals need not be byte-identical. Source raw checksums and canonical CSV equality are the reproducibility controls. A changed input/config is expected to change those CSVs and is reported.
 

@@ -21,6 +21,7 @@ def miniature_project(tmp_path):
         "pyproject.toml": "[project]\nname='test-project'\nversion='1.0.0'\n",
         "run_pipeline.bat": "@echo off\n",
         "run_pipeline.ps1": "Write-Output 'test'\n",
+        "run_pipeline.sh": "#!/bin/sh\nexec python -m src.pipeline \"$@\"\n",
         ".gitignore": ".venv/\n",
         "config/config.yaml": "map:\n  size_metric: attribute_count\n",
         "src/example.py": "def answer():\n    return 42\n",
@@ -93,7 +94,7 @@ def test_release_contains_rebuild_code_outputs_and_excludes_raw_and_cache(miniat
         names = set(release.namelist())
         assert release.testzip() is None
         assert {
-            "README.md", "requirements.txt", "pyproject.toml", "run_pipeline.bat",
+            "README.md", "requirements.txt", "pyproject.toml", "run_pipeline.bat", "run_pipeline.sh",
             "src/example.py", "config/config.yaml", "tests/test_example.py",
             "output/data/assets_clean.csv", "output/documentation/methodology.md",
             "output/reports/run_manifest.json", "RAW_DATA_EXCLUSIONS.txt",

@@ -1,4 +1,5 @@
-from src.make_map import marker_radius, marker_content
+from src.make_map import marker_radius, marker_content, _json
+import json
 
 def test_marker_radius_bins():
     config={"map":{"size_thresholds":[0,3,6],"size_radii":[4,8,12]}}
@@ -9,3 +10,16 @@ def test_marker_content_escapes_source_and_exposes_lists():
     assert "<script>" not in tip and "&lt;script&gt;" in tip
     assert "Walking" in tip and "Near Public Transit" in tip
     assert "Source record" in popup
+
+
+def test_embedded_source_cannot_close_script_or_create_markup():
+    source={"name":"</script><script>alert('source')</script>","separator":"\u2028"}
+    embedded=_json(source)
+    assert "<" not in embedded
+    assert json.loads(embedded)==source
+
+
+def test_missing_size_value_uses_lowest_bin_without_changing_metric():
+    config={"map":{"size_thresholds":[0,3,6,9,12],"size_radii":[5,8,12,17,23]}}
+    assert marker_radius(float('nan'),config)==5
+    assert [marker_radius(n,config) for n in [2,3,8,9,12]]==[5,8,12,17,23]

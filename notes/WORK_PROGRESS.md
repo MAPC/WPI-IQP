@@ -2,7 +2,13 @@
 
 Updated: 2026-09-30, after successful clean rebuild. Earlier checkpoint sections below are a historical work log.
 
-## Current state
+## Inventory management map update — in progress (2026-09-30)
+
+Active root: C:/Users/Jaeyun/Desktop/MAPC Ultimate Deliverables. Documents/WPI-IQP is an identical Git/main commit 55cb526 copy with the same analytical manifest checksum; the current Desktop workspace includes the working environment. Both started clean. The completed analytical build below remains verified historical evidence. This new task covers safe root cleanup, macOS/Linux launcher, management map UI, and targeted tests only. No new analytical processing is required. Counts remain 211 accepted assets, 131 sites, 171 mapped (101 field validated, 70 unfinished), 40 without coordinates, and 27 staff reviewed. External MAPC GIS and frozen MBTA cache are retained. Known source warnings remain unchanged.
+
+Next: verify cleanup hashes, build the display-only management model from saved outputs, render the redesigned map, and run targeted unit/browser checks. Baseline hashes of source/reference, analytical CSVs/workbooks/GIS/charts, static maps, frozen transit, original manifest/QC and release are in notes/map_redesign_baseline.json. The existing release remains the pre-redesign analytical release; current UI provenance will be recorded separately.
+
+## Previously completed analytical state
 
 The project is **complete**. The complete software/data build and required clean-rebuild acceptance passed. Current run manifest status is **success**, with no errors. Release packaging and archived-file checksum/ZIP integrity verification also passed. The release is `releases/MAPC_Recreation_Analysis_2026-09-30_1.0.0.zip`; its final byte size and checksum are in `releases/release_index.json`. Earlier failures below have been repaired, their outputs archived, and they do not describe the current deliverables.
 

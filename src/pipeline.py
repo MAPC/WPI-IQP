@@ -168,7 +168,21 @@ def run(args):
     log.info("analysis_charts_workbooks_documentation_complete")
     from .make_map import make_map
     from .make_static_map import make_static_map
-    map_report=make_map(assets,layers,bundle,root,config,timestamp)
+    # Map metadata describes this run, never a stale manifest from an earlier run.
+    # Final QC is not yet available at this stage and is labelled accordingly.
+    source_relative=source.resolve().relative_to(root).as_posix() if source.resolve().is_relative_to(root) else str(source.resolve())
+    map_snapshot={"pipeline_version":__version__,"run_timestamp_utc":timestamp,
+                  "status":"QC pending at map generation; consult the final QC report",
+                  "authoritative_asset_file":source_relative,
+                  "input_files":[{"path":source_relative,"sha256":sha256(source)}],
+                  "gis":gis_report,"gtfs":transit_report,"unique_assets":len(accepted),
+                  "unique_sites":len(sites),"processed_row_count":len(assets),
+                  "previous_input":args._context["previous_input"],"generated_files":[]}
+    change_path=root/"output/reports/change_report.csv"
+    if previous and change_path.exists():
+        map_snapshot["comparison_status"]="complete"
+        map_snapshot["generated_files"]=[{"path":"output/reports/change_report.csv","sha256":sha256(change_path)}]
+    map_report=make_map(assets,layers,bundle,root,config,timestamp,sites=sites,snapshot=map_snapshot)
     make_static_map(assets,layers,root,config)
     log.info("map_generated counts=%s",{k:v for k,v in map_report.items() if k.endswith("count")})
     tests={"unit_and_integration":{"status":"skipped_by_cli"},"map":{"status":"skipped_by_cli"}}

@@ -17,7 +17,7 @@ def create_release(root):
         while target.exists():
             target=directory/f"MAPC_Recreation_Analysis_{date}_{__version__}_{suffix}_{counter}.zip";counter+=1
     include=[]
-    for name in ["README.md","CHANGELOG.md","requirements.txt","pyproject.toml","run_pipeline.bat","run_pipeline.ps1",".gitignore"]:
+    for name in ["README.md","CHANGELOG.md","requirements.txt","pyproject.toml","run_pipeline.bat","run_pipeline.ps1","run_pipeline.sh",".gitignore"]:
         p=root/name
         if p.exists():include.append(p)
     for folder in ["src","config","tests","output","bootstrap","notes"]:
