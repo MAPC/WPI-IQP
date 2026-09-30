@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+cache/
+output/
+releases/
+input/
+reference/
+/*.csv
+/*.xlsx
+/*.docx
+/*.zip

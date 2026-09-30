@@ -1,0 +1,47 @@
+paths:
+  asset_file: null
+  previous_asset_file: null
+coordinates:
+  correct_reversed: true
+  allow_outside_study_area: false
+  study_area_bounds:
+    min_lat: 41.0
+    max_lat: 43.0
+    min_lon: -73.6
+    max_lon: -69.8
+transit:
+  radius_miles: 0.5
+  refresh_gtfs: false
+  allow_cached_gtfs: true
+  gtfs_url: https://cdn.mbta.com/MBTA_GTFS.zip
+  timeout_seconds: 90
+  snapshot_sha256: null
+gis:
+  analysis_crs: EPSG:26986
+  web_crs: EPSG:4326
+  web_simplification_tolerance_m: 5
+  proximity_thresholds_miles: [0.25, 0.5]
+  proximity_radius_miles: 0.5
+  walking_public_access: [Public]
+map:
+  size_metric: attribute_count
+  size_thresholds: [0, 3, 6, 9, 12]
+  size_radii: [4, 6, 9, 12, 15]
+  colors:
+    Transit + free parking: '#0072B2'
+    Transit only: '#E69F00'
+    Free parking only: '#AA4499'
+    Neither: '#444444'
+    Unknown / unresolved: '#B7BEC7'
+  online_basemap: true
+validation:
+  true_values: [checked, 'true', 'yes', '1', complete, completed, finished]
+  false_values: [unchecked, 'false', 'no', '0', incomplete, unfinished]
+  blank_is_unknown: true
+site_aggregation:
+  access_rule: any_yes_all_no_else_unknown
+  lists: union
+  validation: all_assets_validated
+analysis:
+  validated_only: true
+  inferential_tests: false

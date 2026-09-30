@@ -1,0 +1,19 @@
+version: '1.0.0'
+description: 'Classification of recorded tags, not counts of unique physical facilities. Accessibility is the primary group for accessible facilities; is_amenity separately identifies physical facilities/equipment. Unlisted future tags remain other and are retained.'
+default: {classification: other, is_amenity: false, notes: 'Unmapped attribute: retained; taxonomy review required.'}
+attributes:
+  Accessible / Adaptive Device Trail: {classification: accessibility, is_amenity: false, notes: 'Trail usability characteristic; no count of equipment inferred.'}
+  Accessible Parking: {classification: accessibility, is_amenity: true, notes: 'Physical parking facility tag with accessibility characteristic; structured presence is not independent verification.'}
+  Accessible Restroom: {classification: accessibility, is_amenity: true, notes: 'Physical restroom tag; may describe the same facility as Restrooms Available.'}
+  Adaptive Trails (Mt Biking / XC Skiing): {classification: accessibility, is_amenity: false, notes: 'Trail characteristic.'}
+  Adaptive Water Access (Boating/Fishing/Beach): {classification: accessibility, is_amenity: true, notes: 'Recorded adaptive water-access facility/equipment tag.'}
+  EV Charging Available: {classification: physical_amenity, is_amenity: true, notes: 'Charging infrastructure.'}
+  Family Friendly: {classification: site_characteristic, is_amenity: false, notes: 'Site characteristic, not a physical fixture.'}
+  Free Entry / Parking: {classification: policy_or_rule, is_amenity: false, notes: 'Cost policy. WPI guide requires designated parking and site entry to be always fully free.'}
+  Leashed Dogs Allowed: {classification: policy_or_rule, is_amenity: false, notes: 'Pet policy.'}
+  Lower Visitation: {classification: site_characteristic, is_amenity: false, notes: 'Recorded visitation characteristic.'}
+  Near Public Transit: {classification: transportation_access, is_amenity: false, notes: 'Recorded transit-proximity tag, kept separate from calculated MBTA distance.'}
+  Primitive (Few / No Amenities): {classification: site_characteristic, is_amenity: false, notes: 'Site character; not evidence that every individual amenity is absent.'}
+  Restrooms Available: {classification: physical_amenity, is_amenity: true, notes: 'Physical restroom facility tag; permanent-facility definition follows supplied WPI guide.'}
+  Sensory Guide Features: {classification: accessibility, is_amenity: true, notes: 'Recorded physical sensory guidance features.'}
+  Wheelchair / Stroller Friendly Trail: {classification: accessibility, is_amenity: false, notes: 'Recorded trail accessibility characteristic; flat pavement alone does not establish it.'}

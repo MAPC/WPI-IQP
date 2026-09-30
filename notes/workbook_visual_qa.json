@@ -1,0 +1,40 @@
+[
+  {
+    "file": "output/data/assets_clean.xlsx",
+    "sheets": [
+      "Assets"
+    ]
+  },
+  {
+    "file": "output/data/sites_summary.xlsx",
+    "sheets": [
+      "Sites"
+    ]
+  },
+  {
+    "file": "output/analysis/analysis_workbook.xlsx",
+    "sheets": [
+      "Overview",
+      "Asset-level analysis",
+      "Site-level analysis",
+      "Transportation profiles",
+      "Attributes and amenities",
+      "Activities",
+      "Accessibility",
+      "Transit analysis",
+      "Bike and trail proximity",
+      "Subregion analysis",
+      "Chart source tables",
+      "QC and data quality",
+      "Methodology notes"
+    ]
+  },
+  {
+    "file": "output/documentation/data_dictionary.xlsx",
+    "sheets": [
+      "Asset fields",
+      "Site fields",
+      "Fact-check audit fields"
+    ]
+  }
+]

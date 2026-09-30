@@ -1,0 +1,9 @@
+# Workbook and chart visual verification
+
+The four generated Excel files were reopened by `@oai/artifact-tool` and all 18 worksheets were rendered from the saved workbooks. Opening regions of every sheet were visually reviewed. The native chart was populated and referenced the intended source ranges. Counts and percentage columns were numeric, identities remained text, full text/list fields remained present, tables were filterable, and identity/header panes were frozen.
+
+Review identified and corrected a clipped QC label, raw-sheet opening columns that emphasized long descriptions instead of identities/measures, and an accessibility-chart legend that overlapped its title. The changed regions were re-rendered and reviewed. All eight publication charts were visually inspected, including the corrected title/legend. The main analytical tables explicitly show population sizes, known/all denominators, and asset/site distinctions.
+
+`notes/workbook_visual_qa.mjs` is an optional authoring verification tool using the installed Codex renderer; it is not a pipeline dependency. Its input worksheet manifest is `notes/workbook_visual_qa.json`. The render report and images are written under `output/reports/workbook_visual_qa.json` and `output/reports/workbook_previews/`. A normal portable pipeline run always performs saved-file header, dimension, numeric-type and Excel-error read-back verification in `output/reports/workbook_validation.json`.
+
+This review covers the displayed regions and chart layouts, not native Microsoft Excel application automation. Long source narratives/JSON remain intact in flat data sheets and may require horizontal scrolling or the formula bar to read fully. The renderer displays typed Boolean values as 1/0; saved OOXML retains Boolean types. Figures and workbooks contain Python-computed values; no Excel calculation engine is required to recompute scientific results. Rerun the Python pipeline to refresh them.

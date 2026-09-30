@@ -1,0 +1,49 @@
+# Asset data and reconciliation methodology
+
+## Source hierarchy and data contract
+
+The full MAPC export under `input/assets/` is authoritative. The supplied export contains the `Name of Asset`, `Name of Site`, `Attributes`, `Activities`, `Location`, and `Data Collector Finished?` fields; these distinguish an inventory from prior processed/audit outputs. Prior audits under `reference/previous_audits/` are evidence references only. Their original binary zero values are never interpreted as current evidence that a feature is absent.
+
+`config/schema.yaml` defines critical columns and the alternative coordinate requirements. `config/column_aliases.yaml` resolves headers after Unicode, whitespace and case normalization. Source order is immaterial. Duplicate headers, two aliases for one canonical field, or absent critical columns fail with an actionable report. Unexpected columns remain in the exact source-record JSON. Boolean and numeric inconsistencies are reported. A prior `schema_snapshot.json`, when present, enables header-change reporting.
+
+All CSV records are retained, including wholly blank records and malformed-width records. A CSV record can occupy multiple physical lines. `source_record_index` is the data-record ordinal; `source_row_number` is ordinal plus header; `source_line_start` and `source_line_end` identify physical lines. `source_file`, `source_sha256`, `source_row_uid`, `source_record_json`, and `source_cells_json` preserve the source evidence. `record_status=quarantined` excludes unusable records from analysis while leaving them visible in the clean master data and QC. `record_issue` explains why. Exact duplicates retain one accepted record; later identical copies are quarantined. Conflicting records with the same identity are all quarantined rather than arbitrarily merged.
+
+## Stable identities and limitations
+
+Source MAPC asset/site IDs are preserved when supplied. Otherwise SHA-256 digests of normalized identifying fields provide deterministic keys independent of row order, coordinates, attributes, activities, and validation status. Asset fallback identity uses site name, asset name and municipality; site fallback identity uses site name alone. The latter keeps reservations and networks spanning municipal boundaries together. Name-only sites may collide; spelling changes can split them. A changed asset name or municipality changes a fallback asset key. Generated keys are not asserted to be MAPC-assigned identifiers.
+
+## Attributes, physical amenities, and activities
+
+Comma-, semicolon-, newline-delimited and JSON-list cells are parsed; whitespace/Unicode formatting are normalized, empty tokens removed, and within-record case-insensitive duplicate tokens collapsed. The first wording is retained and the list sorted deterministically. Exact original fields remain available. Activities are discovered, never restricted to a fixed vocabulary.
+
+All structured tags populate `attribute_list` and `attribute_count`. `config/attribute_taxonomy.yaml` assigns a primary group and a separate `is_amenity` flag. Accessible parking, accessible restrooms, adaptive water access, sensory guidance and EV charging are physical facility/equipment tags; trail characteristics, transit proximity, cost/pet policies, family friendliness and primitive character are not physical amenities. `amenity_count` counts selected tags, not unique facilities: “Accessible Restroom” and “Restrooms Available” may refer to the same restroom. New tags remain `other` and trigger a taxonomy-review note; they are not dropped. The default marker size counts **all recorded MAPC attributes/features**.
+
+## Coordinates and validation
+
+Decimal latitude/longitude pairs or separate named fields are accepted. Global coordinate ranges and finite numeric values are checked. A pair that is clearly reversed relative to the configured Massachusetts plausibility rectangle can be repaired with `coordinate_status=reversed` and an explicit issue; the raw source is retained. Globally valid points outside the rectangle are flagged suspicious and excluded from mapping/proximity by default. Missing, malformed and out-of-range coordinates remain in the master dataset. The rectangle is a plausibility filter, not a precise MAPC municipal boundary.
+
+The source checkbox token `checked` maps to True. Explicit negative tokens (`unchecked`, `false`, `no`, `0`, `incomplete`, etc.) map to False. Blank, unknown, unrecognized or missing values remain Unknown (`None`). Blank is not proof that no field visit happened. Config can explicitly change blank interpretation. Finished records are the primary analysis/map universe; accepted unfinished/unknown records remain available and appear in a separate disabled map layer.
+
+## Three-state evidence reconciliation
+
+Six fields use YES / NO / UNKNOWN: transit proximity, free entry/parking, restrooms, accessible parking, accessible restrooms and wheelchair/stroller-friendly trails. A present current structured tag is YES with `structured_tag_only`; absence is UNKNOWN. Every final field has original/audited values, verification status, evidence, and source.
+
+Narrow current-narrative assertions can resolve an absent tag only for finished records. Exact sentence evidence is retained. A contradiction between a positive structured tag and a negative narrative, or contradictory current narrative assertions, produces UNKNOWN with `conflict_needs_review`. Unfinished-record narrative assertions are retained as candidates and do not override tags. This is transparent rule-based evidence review, not an assertion of independent site inspection; human review is still appropriate for context-sensitive statements.
+
+The supplied WPI collector guide defines Free Entry / Parking as both designated parking and site admission always fully free. Free entry alone never establishes that field. Explicit paid parking/admission or absence of designated/on-site parking can establish NO. Accessible parking requires spaces with access aisles; flat paving does not establish trail accessibility. Portable restrooms alone do not establish the permanent-restroom attribute, following the supplied guide. Narrative transit mentions do not establish an exact half-mile threshold.
+
+Prior audit references match by source asset ID if available, otherwise exact normalized asset/site/municipality triple. Multiple exact matches are unresolved. Similar-name candidates within an exact site/municipality are review-only; they never apply corrections. Even an exact match cannot transfer a former audited value automatically. The long audit preserves previous value, evidence, source, match status and current reassessment. Prior web links have not been independently reverified by this module. Official GTFS calculation is applied separately with its actual snapshot provenance.
+
+The supplied WPI guide includes pedestrian-route usability in its transit discussion. The present user specification explicitly requires **MBTA proximity within exactly 0.5 mile**, separately from accessible pedestrian-route assessment; the pipeline follows that instruction. A transit-radius result never certifies a usable walking route.
+
+## Site summaries
+
+Only accepted asset records enter site aggregation. Attribute, amenity and activity lists are unions rather than sums. Site counts are unique recorded tags; mean per-asset counts remain separately available. A site access field is YES when at least one asset is YES, NO only when all accepted assets are explicitly NO, and UNKNOWN otherwise. Every field includes counts of YES, NO and UNKNOWN assets. Transit and free parking may be present at different entrances; `co_located_transit_free_parking_asset_count` explicitly counts entrances where both occur.
+
+`validated_asset_count` and `staff_reviewed_asset_count` retain coverage. `all_assets_field_validated` and `all_assets_staff_reviewed` are Boolean completeness indicators. `any_asset_field_validated` identifies sites with at least one finished asset. Canonical site validation is True only if all are True, False if any explicit False is present, and Unknown otherwise. Validated-site sensitivity analysis must reaggregate only the finished asset subset, rather than importing unfinished features from a full-site union.
+
+Assets within a site are clustered observations. Asset-level descriptions and site-level summaries have different denominators; the pipeline does not assert independent samples or causal effects.
+
+## Version comparison
+
+Accepted records match on stable identity. Added/removed records and changes to names, coordinates, attributes, amenities, activities, reconciled access and validation are reported in long form. Changed names sharing a stable ID are rename candidates. When fallback IDs change, exact site/municipality/coordinates can suggest a rename for review; the added and removed records remain and no automatic merge occurs. Coordinates and values from older exports are never copied into current data.

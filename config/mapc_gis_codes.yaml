@@ -1,0 +1,206 @@
+{
+  "metadata_version": 1,
+  "sources": {
+    "bicycle_facilities": {
+      "url": "https://geo.mapc.org/server/rest/services/MapcTrails/MapServer/0?f=pjson",
+      "retrieved_utc": "2026-09-30T08:04:16.320793+00:00",
+      "sha256": "cb80a317f21d96f78efa52c731fc8106adc81dcdaa5b4c9fe677c1c5ad5b7ffe",
+      "cached_file": "reference/gis_metadata/mapctrails_bicycle_mapserver.json",
+      "layer_name": "Existing Protected Bike Lanes",
+      "note": "AllTrails FeatureServer omitted bicycle domains; official MapcTrails MapServer publishes the complete domains."
+    },
+    "shared_use_paths": {
+      "url": "https://geo.mapc.org/server/rest/services/Transportation/AllTrails/FeatureServer/8?f=pjson",
+      "retrieved_utc": "2026-09-30T03:53:04.451822+00:00",
+      "sha256": "aba910cc5cdedaf9c9497db4f258707900ea484e1e06e5abe74fc29a974bcb4d",
+      "cached_file": "reference/gis_metadata/shared_use_paths_aba910cc5cde.json",
+      "layer_name": "Existing Paved Shared Use Paths"
+    },
+    "walking_trails": {
+      "url": "https://geo.mapc.org/server/rest/services/Transportation/AllTrails/FeatureServer/4?f=pjson",
+      "retrieved_utc": "2026-09-30T03:53:04.559410+00:00",
+      "sha256": "f41b2f5c107382c9f9dcd0b55f5e5dbe1fdcaae781705d0b3cf7db0326ed0c01",
+      "cached_file": "reference/gis_metadata/walking_trails_f41b2f5c1073.json",
+      "layer_name": "Paved Footway"
+    },
+    "land_line_systems": {
+      "url": "https://geo.mapc.org/server/rest/services/transportation/landlines/FeatureServer/0?f=pjson",
+      "retrieved_utc": "2026-09-30T03:53:04.681214+00:00",
+      "sha256": "80de3ab76649822955c209e6a82e11906177ac11082a59317a397636e9215a43",
+      "cached_file": "reference/gis_metadata/land_line_systems_80de3ab76649.json",
+      "layer_name": "Facility Type"
+    }
+  },
+  "layers": {
+    "bicycle_facilities": {
+      "domains": {
+        "reg_ll_typ": {
+          "GR": "Greenway Route",
+          "WT": "Regional Walking Trail",
+          "GR_WT": "Greenway Route and Regional Walking trail",
+          "QB": "COVID Quick Build"
+        },
+        "fac_stat": {
+          "1": "Existing",
+          "2": "Under Construction / In Design",
+          "3": "Envisioned / Planned"
+        },
+        "fac_type": {
+          "1": "Bike Lane",
+          "3": "Sign-posted on-road bike route",
+          "4": "Paved bike shoulder",
+          "5": "Shared-Use Path",
+          "7": "Bicycle / Pedestrian priority roadway",
+          "9": "Marked Shared-Lane",
+          "2": "Protected Bike Lane"
+        },
+        "fac_detail": {
+          "10": "Bike Lane",
+          "11": "Buffered bike lane",
+          "12": "Colored bike lane",
+          "13": "Counterflow bike lane",
+          "14": "Advisory lane",
+          "20": "Cycle track -unspecified",
+          "21": "Cycle track inside parking",
+          "22": "Cycle track with curb/landscape barrier",
+          "23": "Cycle track with bollards / posts",
+          "31": "BSG signs",
+          "32": "BSG and other",
+          "41": "Marked shoulder",
+          "42": "Signed shoulder",
+          "51": "Shared use path",
+          "52": "Minimally improved path",
+          "53": "Campus path",
+          "54": "Unimporved path",
+          "61": "On-road undesignated route",
+          "62": "Needs review",
+          "63": "In design",
+          "71": "Traffic calmed street",
+          "72": "Service road",
+          "73": "Shared street design",
+          "74": "Bike boulevard/neighborway",
+          "75": "Park road",
+          "76": "Center line removal",
+          "81": "Climbing lane",
+          "82": "Bike lane/sharrow",
+          "91": "Sharrow",
+          "92": "Priority Shared lane",
+          "93": "Wide curb lane otherwise marked for shared rd",
+          "94": "Bus bike lane"
+        },
+        "surf_type": {
+          "1": "Unimproved",
+          "2": "Gravel or stone road",
+          "3": "Brick road",
+          "4": "block road",
+          "5": "Surface-treated road",
+          "7": "Portland cement concrete road",
+          "8": "Composite road; flexible over rigid",
+          "9": "Composite road; rigid over flexible or rigid over rigid",
+          "11": "Boardwalk",
+          "6": "Asphalt (Bituminous concrete) road",
+          "10": "Stone dust or Stabilized Soil"
+        }
+      }
+    },
+    "shared_use_paths": {
+      "domains": {
+        "reg_ll_typ": {
+          "GR": "Greenway Route",
+          "WT": "Regional Walking Trail",
+          "GR_WT": "Greenway Route and Regional Walking trail",
+          "QB": "COVID Quick Build"
+        },
+        "fac_stat": {
+          "1": "Existing",
+          "2": "Under Construction / In Design",
+          "3": "Envisioned / Planned"
+        },
+        "fac_type": {
+          "1": "Shared Use Path \u2013 Improved surface, asphalt or concrete",
+          "2": "Shared Use Path \u2013 Improved surface, stone dust, stabilized soil, or the equivalent",
+          "3": "Shared Use Path \u2013 Unimproved surface, passable natural surface"
+        },
+        "fac_detail": {
+          "10": "Bike Lane",
+          "11": "Buffered bike lane",
+          "12": "Colored bike lane",
+          "13": "Counterflow bike lane",
+          "14": "Advisory lane",
+          "20": "Cycle track -unspecified",
+          "21": "Cycle track inside parking",
+          "22": "Cycle track with curb/landscape barrier",
+          "23": "Cycle track with bollards / posts",
+          "31": "BSG signs",
+          "32": "BSG and other",
+          "41": "Marked shoulder",
+          "42": "Signed shoulder",
+          "51": "Shared use path",
+          "52": "Minimally improved path",
+          "53": "Campus path",
+          "54": "Unimporved path",
+          "61": "On-road undesignated route",
+          "62": "Needs review",
+          "63": "In design",
+          "71": "Traffic calmed street",
+          "72": "Service road",
+          "73": "Shared street design",
+          "74": "Bike boulevard/neighborway",
+          "75": "Park road",
+          "76": "Center line removal",
+          "81": "Climbing lane",
+          "82": "Bike lane/sharrow",
+          "91": "Sharrow",
+          "92": "Priority Shared lane",
+          "93": "Wide curb lane otherwise marked for shared rd",
+          "94": "Bus bike lane"
+        }
+      }
+    },
+    "walking_trails": {
+      "domains": {
+        "fac_stat": {
+          "1": "Existing",
+          "2": "Under Construction / In Design",
+          "3": "Envisioned / Planned"
+        },
+        "fac_type": {
+          "1": "Paved Walkway",
+          "2": "Footpath, natural surface (single track or unknown/default)",
+          "3": "Cartpath, natural surface (double track)"
+        }
+      }
+    },
+    "land_line_systems": {
+      "domains": {
+        "reg_ll_type": {
+          "GR": "Greenway Route",
+          "WT": "Regional Walking Trail",
+          "GR_WT": "Greenway Route and Regional Walking trail",
+          "QB": "COVID Quick Build"
+        },
+        "fac_stat": {
+          "1": "Existing",
+          "2": "Under Construction / In Design",
+          "3": "Envisioned / Planned"
+        },
+        "seg_type": {
+          "1": "Shared Use Path",
+          "2": "Protected Bike Lane and adjacent sidewalk",
+          "3": "Bike Lane and adjacent sidewalk",
+          "4": "Shared Roadway with a dash shoulder (advisory lane)",
+          "5": "Shared Roadway - no pavement markings",
+          "9": "Gap - undefined facility",
+          "6": "Shared Use Path - unimproved surface (not accessible)",
+          "11": "Foot Trail \u2013 natural or paved surface trail",
+          "12": "Foot Trail \u2013 shared roadway (low volume) or adjacent sidewalk",
+          "19": "Foot Trail Gap"
+        },
+        "idsignage_status": {
+          "1": "Landline or other regional identification signage",
+          "2": "Local trail or corridor name signage"
+        }
+      }
+    }
+  }
+}
