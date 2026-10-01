@@ -1,2 +1,4 @@
 # Shell launchers and checks must retain Unix line endings on every platform.
 *.sh text eol=lf
+*.command text eol=lf
+*.bat text eol=crlf

@@ -81,3 +81,29 @@ def test_landline_gap_is_not_current_infrastructure():
     assert result["analysis_include"].tolist() == [True, False, False]
     assert result["exclusion_reason"].iloc[1] == "network_gap_not_facility"
     assert result["exclusion_reason"].iloc[2] == "unknown_facility_type"
+
+
+def test_gis_display_is_in_memory_and_full_lines_are_preserved(tmp_path):
+    import json
+    import shutil
+    from src.parse_mapc_gis import process_gis
+    root = Path(__file__).resolve().parents[1]
+    (tmp_path / "config").mkdir()
+    shutil.copy2(root / "config/mapc_gis_codes.yaml", tmp_path / "config/mapc_gis_codes.yaml")
+    source = gpd.GeoDataFrame({"fac_stat": [1], "fac_type": [2]}, geometry=[
+        LineString([(200000, 900000), (200050, 900001), (200100, 900000)])], crs=26986)
+    shape_dir = tmp_path / "fixture"
+    shape_dir.mkdir()
+    source.to_file(shape_dir / "bike.shp", driver="ESRI Shapefile", engine="pyogrio")
+    inputs = tmp_path / "input/gis"
+    inputs.mkdir(parents=True)
+    with zipfile.ZipFile(inputs / "mapc_bike_facilities.zip", "w") as archive:
+        for member in shape_dir.iterdir():
+            archive.write(member, member.name)
+    layers, report = process_gis(tmp_path, {"gis": {"web_simplification_tolerance_m": 5}})
+    assert layers["bicycle_facilities"].geometry.iloc[0].equals(source.geometry.iloc[0])
+    display = json.loads(layers["bicycle_facilities"].attrs["web_geojson"])
+    assert len(display["features"]) == 1
+    assert len(display["features"][0]["geometry"]["coordinates"]) == 2
+    assert report["layers"]["bicycle_facilities"]["source_features"] == 1
+    assert not (tmp_path / "output").exists()

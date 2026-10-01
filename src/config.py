@@ -9,10 +9,6 @@ def load_config(root):
         raise ValueError("MAPC's transit definition requires transit.radius_miles exactly 0.5")
     if config.get("gis",{}).get("web_crs","EPSG:4326")!="EPSG:4326":
         raise ValueError("Web GeoJSON requires EPSG:4326; set gis.web_crs to EPSG:4326")
-    if not config.get("analysis",{}).get("validated_only",True):
-        raise ValueError("Primary analysis requires field-validated assets. All records remain in the clean export.")
-    if config.get("analysis",{}).get("inferential_tests",False):
-        raise ValueError("This version provides descriptive analysis only; inferential_tests must be false")
     m = config["map"]
     if m["size_metric"] not in ("attribute_count", "amenity_count"):
         raise ValueError("map.size_metric must be attribute_count or amenity_count")

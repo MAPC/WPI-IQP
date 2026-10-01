@@ -49,6 +49,3 @@ site_aggregation:
   access_rule: any_yes_all_no_else_unknown
   lists: union
   validation: all_assets_validated
-analysis:
-  validated_only: true
-  inferential_tests: false

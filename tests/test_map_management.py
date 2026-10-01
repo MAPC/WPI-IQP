@@ -1,6 +1,5 @@
 """Focused tests for read-only management rules, distinct from spatial analysis."""
 from copy import deepcopy
-import hashlib
 import json
 
 import pandas as pd
@@ -20,10 +19,10 @@ def asset(key="a", **changes):
     return {**row, **changes}
 
 
-def run(tmp_path, rows, sites=None, manifest=None):
+def run(tmp_path, rows, sites=None, manifest=None, schema_report=None, changes=None):
     if sites is None:
         sites = pd.DataFrame([{"site_id": key, "site_name": "Park"} for key in sorted({row["site_id"] for row in rows if row["record_status"] == "accepted"})])
-    return build_management(pd.DataFrame(rows), sites, manifest or {}, tmp_path)
+    return build_management(pd.DataFrame(rows), sites, manifest or {}, schema_report=schema_report, changes=changes)
 
 
 def test_unknown_is_not_access_conflict_and_resolved_correction_is_not_issue(tmp_path):
@@ -87,42 +86,33 @@ def test_stale_or_inconsistent_site_summary_fails_explicitly(tmp_path, site_rows
 
 
 def test_schema_warnings_require_source_checksum_and_do_not_change_recorded_value(tmp_path):
-    report_dir = tmp_path / "output/reports"
-    report_dir.mkdir(parents=True)
     schema = {"source_file": "input/assets/current.csv", "source_sha256": "current-sha",
               "type_inconsistencies": [{"source_row_number": 2, "field": "municipality", "raw_value": "02176", "issue": "Postal-code-like municipality retained for review."}]}
-    path = report_dir / "schema_report.json"
-    path.write_text(json.dumps(schema), encoding="utf-8")
-    result = run(tmp_path, [asset(municipality="02176")])
+    result = run(tmp_path, [asset(municipality="02176")], schema_report=schema)
     assert result["summary"]["source_warnings"] == 1
     assert result["records"][0]["municipality"] == "02176"
     assert "02176" in result["records"][0]["issue_reasons"][0]
     schema["source_sha256"] = "obsolete"
-    path.write_text(json.dumps(schema), encoding="utf-8")
-    result = run(tmp_path, [asset(municipality="02176")])
+    result = run(tmp_path, [asset(municipality="02176")], schema_report=schema)
     assert result["summary"]["source_warnings"] == 0
     assert any("does not match" in warning for warning in result["warnings"])
 
 
 def comparison(tmp_path, change_rows=None):
-    directory = tmp_path / "output/reports"
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / "change_report.csv"
     defaults = {"change_type": "coordinate_change", "source_record_key": "a", "previous_record_key": "a",
                 "asset_name": "Entrance a", "site_name": "Park", "field": "latitude", "previous_value": "42.0",
                 "current_value": "42.1", "match_method": "stable_record_key", "review_note": ""}
-    pd.DataFrame([{**defaults, **row} for row in (change_rows or [{}])]).to_csv(path, index=False)
-    manifest = {"status": "success", "run_timestamp_utc": "2026-09-30T00:00:00Z",
+    frame = pd.DataFrame([{**defaults, **row} for row in (change_rows or [{}])])
+    manifest = {"comparison_status": "complete", "run_timestamp_utc": "2026-09-30T00:00:00Z",
                 "authoritative_asset_file": "input/assets/current.csv",
                 "input_files": [{"path": "input/assets/current.csv", "sha256": "current-sha"}],
-                "previous_input": {"path": "previous.csv", "sha256": "previous-sha"},
-                "generated_files": [{"path": "output/reports/change_report.csv", "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}]}
-    return path, manifest
+                "previous_input": {"path": "previous.csv", "sha256": "previous-sha"}}
+    return frame, manifest
 
 
 def test_verified_comparison_exposes_removed_metadata_without_creating_current_asset(tmp_path):
-    _, manifest = comparison(tmp_path, [{}, {"change_type": "removed_asset", "source_record_key": "old", "previous_record_key": "old", "field": ""}])
-    result = run(tmp_path, [asset()], manifest=manifest)
+    frame, manifest = comparison(tmp_path, [{}, {"change_type": "removed_asset", "source_record_key": "old", "previous_record_key": "old", "field": ""}])
+    result = run(tmp_path, [asset()], manifest=manifest, changes=frame)
     assert result["changes"]["enabled"] is True
     assert result["records"][0]["management_status"] == "changed"
     assert result["summary"]["changed_records"] == 1
@@ -131,33 +121,34 @@ def test_verified_comparison_exposes_removed_metadata_without_creating_current_a
     assert "latitude" not in result["changes"]["removed_records"][0]
 
 
-@pytest.mark.parametrize("condition", ["absent_previous", "wrong_checksum", "wrong_source", "failed_run", "missing_entry", "missing_timestamp"])
+@pytest.mark.parametrize("condition", ["absent_previous", "malformed_comparison", "wrong_source", "incomplete_comparison", "missing_frame", "missing_timestamp"])
 def test_unverified_or_stale_change_reports_are_disabled(tmp_path, condition):
-    path, manifest = comparison(tmp_path)
+    frame, manifest = comparison(tmp_path)
     if condition == "absent_previous":
         manifest["previous_input"] = None
-    elif condition == "wrong_checksum":
-        path.write_text(path.read_text() + "\n", encoding="utf-8")
+    elif condition == "malformed_comparison":
+        frame = frame.drop(columns="change_type")
     elif condition == "wrong_source":
         manifest["input_files"][0]["sha256"] = "other-source"
-    elif condition == "failed_run":
-        manifest["status"] = "failed"
-    elif condition == "missing_entry":
-        manifest["generated_files"] = []
+    elif condition == "incomplete_comparison":
+        manifest["comparison_status"] = "incomplete"
+    elif condition == "missing_frame":
+        frame = None
     else:
         manifest.pop("run_timestamp_utc")
-    result = run(tmp_path, [asset()], manifest=manifest)
+    result = run(tmp_path, [asset()], manifest=manifest, changes=frame)
     assert result["changes"]["enabled"] is False
     assert result["records"][0]["changes"] == []
     assert result["summary"]["changed_records"] == 0
 
 
-def test_current_pipeline_completed_comparison_can_precede_final_qc(tmp_path):
-    _, manifest = comparison(tmp_path)
-    manifest.update(status="QC pending at map generation", comparison_status="complete")
-    result = run(tmp_path, [asset()], manifest=manifest)
+def test_current_in_memory_comparison_has_no_report_dependency(tmp_path):
+    frame, manifest = comparison(tmp_path)
+    manifest.update(status="Generated from current inputs", comparison_status="complete")
+    result = run(tmp_path, [asset()], manifest=manifest, changes=frame)
     assert result["changes"]["enabled"] is True
-    assert result["snapshot"]["qc_status"] == "QC pending at map generation"
+    assert result["snapshot"]["qc_status"] == "Generated from current inputs"
+    assert not (tmp_path / "output").exists()
 
 
 def test_no_comparison_snapshot_is_explicit_and_inputs_are_not_mutated(tmp_path):

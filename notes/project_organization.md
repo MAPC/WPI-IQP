@@ -1,74 +1,53 @@
-# Project organization and launcher verification
+# Project organization
 
-Updated 2026-09-30 for the inventory-management map revision.
+Updated 2026-10-01 for the single management-map product. The active workspace is `C:\Users\Jaeyun\Desktop\MAPC Ultimate Deliverables`.
 
-The active workspace is `C:\Users\Jaeyun\Desktop\MAPC Ultimate Deliverables`.
-Git was clean on `main`, tracking `origin/main`, before this revision. No commit,
-push, or history rewrite was performed.
+## Staff-facing workflow
 
-## Verified source cleanup
+Staff replace the sole current CSV in `input/assets/`, then double-click `Run_MAPC_Tool.bat` on Windows or `Run_MAPC_Tool.command` in macOS Finder. The export can have any filename. Both launchers call the same `launch_mapc.py` setup entry point and `src.pipeline` product workflow.
 
-All 13 loose original files had organized copies with identical SHA-256 hashes.
-Each loose file and retained copy also matched the historical
-`bootstrap/root_inventory.csv` checksum. Only the 13 redundant root copies were
-removed. No source file was rewritten or overwritten; no file needed to be
-moved, and there were no checksum discrepancies.
+The shared setup requires Python 3.12+, creates or reuses `.venv`, checks pinned installed package versions and installs missing application dependencies. The pipeline calculates the current inventory in memory, writes `output/maps/MAPC_access_map.html`, starts a loopback-only server on an available port, and opens the default browser. The launcher window stays open until the server is stopped. Normal use requires no separate environment activation or server command.
 
-Retained authoritative locations:
+Tests remain source code for maintainers. They are not a product mode and are not run during staff launches. Additional test dependencies are in `requirements-dev.txt`; launchers use `requirements.txt` only. No executable/application packaging is required.
 
-| Source group | Files | Location |
+## Required local inputs
+
+| Source group | Supplied files | Location |
 | --- | ---: | --- |
-| Current asset export | 1 | `input/assets/` |
+| Current full asset export | 1 | `input/assets/` |
 | Zipped GIS geometry | 4 | `input/gis/` |
 | GIS attribute references | 4 | `input/gis_reference/` |
 | Data-collection guides | 2 | `reference/field_guides/` |
 | Prior audit references | 2 | `reference/previous_audits/` |
+| Verified GIS code metadata | Versioned reference set | `reference/gis_metadata/` and `config/mapc_gis_codes.yaml` |
+| Official transit feed and provenance | Reusable cached feed | `cache/transit/` |
 
-`input/input_bak` was absent, so no backup folder was removed. The historical
-bootstrap inventory was not changed. Full absolute paths, file sizes, source
-hashes, actions, and verification results are recorded in
-`bootstrap/root_cleanup_report.csv` and `.json`.
+The raw/reference material and caches are ignored by Git. Provide the complete institutional data bundle alongside a fresh source clone; do not assume a clone includes those inputs. Preserve source filenames and bytes. A previous asset export, when explicitly configured for comparison, belongs outside the current `input/assets/` directory.
 
-Six disposable runtime directories were removed: the root `.pytest_cache`, two
-root `pytest-cache-files-*` directories, and `__pycache__` under `src`, `tests`,
-and `notes`. Absolute resolved targets were checked to remain inside this
-workspace before removal. `cache/transit`, `cache/rebuilds`, `cache/run_history`,
-and all other reproducibility cache contents were retained. Later test execution
-may recreate ignored runtime files.
+## Generated product and internal files
 
-## Clone layout and ignored files
+The staff-facing generated tree is:
 
-The ignore rules exclude virtual environments, bytecode, pytest runtime files,
-`.DS_Store`, raw/reference content, generated outputs, caches, and release
-archives. Empty `.gitkeep` files make expected input, reference, cache, output,
-release, and legacy folders visible in a clone. Git ignore checks verified both
-that representative source/generated files remain ignored and that placeholders
-can be tracked. The placeholders contain no data.
-`.gitattributes` preserves LF line endings for shell scripts on every platform.
+```text
+output/
+  maps/
+    MAPC_access_map.html
+```
 
-## macOS and Linux launcher
+Required asset, site, access-evidence, spatial and management calculations are passed in memory. The HTML includes its local inventory, GIS/transit display data and vendored Leaflet resources. It does not depend on separately generated tables or layer files.
 
-Run `sh ./run_pipeline.sh` from the project folder, or pass the full launcher
-path from another folder. The launcher resolves its own project root, uses
-`.venv/bin/python`, and creates that environment with `python3` when necessary.
-Python 3.12 or newer is required. An alternative Python executable can be
-selected with the `MAPC_PYTHON` environment variable when creating the environment.
+`cache/transit/` retains the exact official GTFS ZIP and checksum/provenance metadata so future launches can reproduce the same transit evidence. `cache/runtime/` contains small internal setup/processing logs for actionable errors. Source archives under `cache/input_versions/`, if present, are original inputs rather than disposable output. `.venv/` and Python/test caches are machine-local runtime files.
 
-Dependencies are installed only when the SHA-256 of `requirements.txt` differs
-from the successful-install stamp in `.venv/requirements.sha256`, or when that
-stamp is absent. The stamp is written only after installation succeeds.
-Arguments are forwarded unchanged to `python -m src.pipeline`. Direct execution
-of `src/pipeline.py` is unsupported because the package uses relative imports.
+Obsolete chart, workbook, static-map, generated-documentation, standalone-table/report and release-archive outputs do not belong in the normal product tree. Dependency checks must precede removal of a legacy generator; computation still needed by the HTML is retained. The final cleanup inventory and validation evidence are maintained in `notes/WORK_PROGRESS.md` and `notes/MAP_HANDOFF.md`.
 
-The launcher passed Bash syntax validation using Git for Windows. The isolated
-`notes/launcher_smoke_test.sh` harness passed seven scenarios and 18 assertions:
-environment reuse/creation, stamp-based installation, failure handling, root
-resolution, arguments containing spaces, and exit-code propagation. It used fake
-Python commands and saved `output/reports/launcher_test_results.json`.
+## Earlier verified root cleanup
 
-One focused release-packaging unit test passed with the new launcher included in
-its miniature fixture; future releases now include `run_pipeline.sh`. The real
-release archive and index were left unchanged. Windows sandbox restrictions
-initially blocked Bash's signal pipe and pytest's temporary directory; these
-checks passed outside that sandbox. No full pipeline run, dependency
-installation, or actual macOS/Linux execution was performed for this revision.
+Before the management-map revision, all 13 loose original root files had organized copies with identical SHA-256 hashes. Each loose file and retained copy also matched the historical `bootstrap/root_inventory.csv` checksum. Only the 13 redundant root copies were removed. No source file was rewritten, and no checksum discrepancies occurred.
+
+`input/input_bak` was absent. Historical bootstrap evidence was not rewritten; full paths, sizes, source hashes, actions and verification results remain in `bootstrap/root_cleanup_report.csv` and `.json`. That earlier source organization is complete and does not need to be repeated for a normal product update.
+
+## Git and platform behavior
+
+Ignore rules keep raw/reference data, generated output, transit caches, virtual environments and disposable test files local. Folder placeholders only establish expected layout; they contain no input data. `.gitattributes` preserves LF for shell launchers. The macOS `.command` also needs an executable repository mode; maintain that when copying or distributing the project.
+
+The Windows BAT and macOS COMMAND wrappers are deliberately thin. Environment preparation and application behavior live in shared Python code. Native macOS execution must not be inferred from shell syntax or stub testing on Windows. See `notes/map_validation.md` for the exact platforms and checks actually exercised.

@@ -1,36 +1,44 @@
-"""One-command MAPC project orchestration with auditable outputs and release gates."""
+"""Generate and serve the MAPC recreation inventory map from current inputs."""
 from __future__ import annotations
-import argparse
+
 from datetime import datetime, timezone
-import html
-import json
 import logging
 from pathlib import Path
-import shutil
-import subprocess
 import sys
-import traceback
-import pandas as pd
+
 from . import __version__
 from .config import load_config
-from .utils import write_json, write_csv, sha256, html_page
+from .utils import sha256
 
-def choose_asset_file(root,config):
-    explicit=config.get("paths",{}).get("asset_file")
-    if explicit:
-        p=Path(explicit);p=p if p.is_absolute() else root/p
-        if not p.is_file():raise FileNotFoundError(f"Configured asset input is missing: {p}")
-        return p
-    files=sorted((root/"input/assets").glob("*.csv"))
-    if len(files)!=1:raise ValueError(f"Expected exactly one CSV in input/assets; found {len(files)}. Keep one current export there or set paths.asset_file in config/config.yaml.")
+
+class ProductInputError(ValueError):
+    """An input issue that can be explained directly to the person running the tool."""
+
+
+def choose_asset_file(root, config=None):
+    folder = Path(root) / "input/assets"
+    files = sorted(path for path in folder.glob("*") if path.is_file() and path.suffix.casefold() == ".csv")
+    if not files:
+        raise ProductInputError("No Airtable CSV was found in input/assets/.\n\nPut the newest full Airtable export in that folder and run again.")
+    if len(files) > 1:
+        raise ProductInputError("More than one Airtable CSV was found in input/assets/.\n\nKeep exactly one CSV: the newest full Airtable export, then run again.")
     return files[0]
 
+
 def setup_logging(root):
-    log=logging.getLogger("mapc");log.setLevel(logging.INFO)
-    for h in log.handlers[:]:h.close();log.removeHandler(h)
-    formatter=logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    for h in [logging.FileHandler(root/"output/logs/pipeline.log",encoding="utf-8"),logging.StreamHandler(sys.stdout)]:h.setFormatter(formatter);log.addHandler(h)
+    directory = Path(root) / "cache/runtime"
+    directory.mkdir(parents=True, exist_ok=True)
+    log = logging.getLogger("mapc")
+    log.setLevel(logging.INFO)
+    log.propagate = False
+    for handler in log.handlers[:]:
+        handler.close()
+        log.removeHandler(handler)
+    handler = logging.FileHandler(directory / "last_run.log", mode="w", encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    log.addHandler(handler)
     return log
+
 
 def reconcile_transit(assets,audit,bundle):
     from .reconcile_access_fields import transportation_profile
@@ -54,197 +62,111 @@ def reconcile_transit(assets,audit,bundle):
     assets["transportation_access_profile"]=[transportation_profile(t,p) for t,p in zip(assets.near_public_transit,assets.free_entry_parking)]
     return assets,audit
 
-def schema_report(root,report):
-    write_json(root/"output/reports/schema_report.json",report)
-    body='<p>Input columns are resolved by name and configured aliases. Missing critical fields or ambiguous duplicate headers stop the run.</p><pre>'+html.escape(json.dumps(report,indent=2,ensure_ascii=False))+'</pre>'
-    (root/"output/reports/schema_report.html").write_text(html_page("MAPC asset schema validation",body),encoding="utf-8")
-    if report.get("valid"):write_json(root/"output/reports/schema_snapshot.json",{"input_columns":report["input_columns"]})
 
-def run_tests(root):
-    result=subprocess.run([sys.executable,"-m","pytest","-q","tests","--junitxml=output/reports/unit_tests.xml"],cwd=root,text=True,capture_output=True,encoding="utf-8",errors="replace")
-    (root/"output/reports/unit_test_results.txt").write_text(result.stdout+result.stderr,encoding="utf-8")
-    return {"status":"passed" if result.returncode==0 else "failed","exit_code":result.returncode,"summary":result.stdout.strip().splitlines()[-1] if result.stdout.strip() else result.stderr[-1000:]}
+def generate_map(root: Path) -> dict:
+    """Calculate current evidence in memory and atomically replace the one HTML output.
 
-def clean_outputs(root,category="rebuilds"):
-    output=(root/"output").resolve()
-    if not output.exists():return None
-    for handler in logging.getLogger("mapc").handlers[:]:
-        handler.close();logging.getLogger("mapc").removeHandler(handler)
-    backup=(root/"cache"/category/datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")/"output").resolve()
-    if not output.is_relative_to(root) or not backup.is_relative_to(root):raise ValueError("Clean rebuild path escaped the project root")
-    backup.parent.mkdir(parents=True,exist_ok=True)
-    shutil.move(str(output),str(backup))
-    return backup
-
-def verify_rebuild(root,baseline):
-    checks=[]
-    roots=[root/"output"]+([baseline] if baseline else [])
-    expected=sorted({p.relative_to(base).as_posix() for base in roots for folder in ["data","analysis"] for p in (base/folder).glob("*.csv")})
-    if baseline:
-        for relative in expected:
-            old,new=baseline/relative,root/"output"/relative
-            checks.append({"file":relative,"previous_exists":old.exists(),"new_exists":new.exists(),"sha256_identical":old.exists() and new.exists() and sha256(old)==sha256(new)})
-    result={"clean_rebuild":bool(baseline),"previous_outputs_preserved_at":str(baseline.relative_to(root)) if baseline else None,"comparison_scope":"Deterministic canonical CSVs; timestamps, Excel ZIP metadata and report timestamps are expected to vary.","checks":checks,"passed":bool(checks) and all(c["sha256_identical"] for c in checks)}
-    write_json(root/"output/reports/clean_rebuild_acceptance.json",result)
-    return result
-
-def run(args):
-    root=args.root.resolve()
-    timestamp=datetime.now(timezone.utc).isoformat()
-    options={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items() if not k.startswith("_")}
-    args._context={"timestamp":timestamp,"source":None,"schema":{},"gis":{},"transit":{},"qc":{},"run_options":options,"previous_input":None}
-    if args.ingest_root:
-        from .bootstrap_project import bootstrap
-        bootstrap(root)
-    history=clean_outputs(root,"rebuilds" if args.clean_rebuild else "run_history") if (root/"output").exists() else None
-    baseline=history if args.clean_rebuild else None
-    for d in ["data","gis","maps","charts","analysis","documentation","reports","logs"]:(root/"output"/d).mkdir(parents=True,exist_ok=True)
-    if history and not args.clean_rebuild and (history/"reports/schema_snapshot.json").exists():
-        shutil.copy2(history/"reports/schema_snapshot.json",root/"output/reports/schema_snapshot.json")
-    log=setup_logging(root);warnings=[];errors=[]
-    config=load_config(root);source=choose_asset_file(root,config)
-    args._context["source"]=source
-    log.info("run_start version=%s source=%s",__version__,source)
+    The source CSV, reference audits, complete GIS lines, and verified GTFS feed
+    are authoritative. No generated table or report is needed by this workflow.
+    """
+    root = Path(root).resolve()
+    log = setup_logging(root)
+    timestamp = datetime.now(timezone.utc).isoformat()
+    config = load_config(root)
+    source = choose_asset_file(root)
+    print("Reading the Airtable inventory...", flush=True)
     from .parse_assets import load_assets
     from .validate_schema import SchemaValidationError
-    try:assets,schema=load_assets(source,config,root)
-    except SchemaValidationError as e:schema_report(root,e.report);raise
-    schema_report(root,schema);warnings.extend(schema.get("warnings",[]))
-    args._context["schema"]=schema
-    log.info("schema_pass source_rows=%d accepted_rows=%d quarantined_rows=%d",len(assets),schema["accepted_row_count"],schema["quarantined_row_count"])
-    if schema["quarantined_row_count"]:warnings.append(f"{schema['quarantined_row_count']} source records quarantined; retained in assets_clean and quarantined_records.csv.")
+    try:
+        assets, schema = load_assets(source, config, root)
+    except SchemaValidationError as exc:
+        raise ProductInputError(str(exc) + "\n\nUse a full Airtable export with the required inventory columns and run again.") from exc
+    log.info("source=%s rows=%d accepted=%d quarantined=%d", source, len(assets), schema["accepted_row_count"], schema["quarantined_row_count"])
+    warnings = list(schema.get("warnings", []))
+    if schema["quarantined_row_count"]:
+        warnings.append(f"{schema['quarantined_row_count']} source records were quarantined and excluded from the management inventory.")
     from .reconcile_access_fields import reconcile_access_fields
-    assets,audit=reconcile_access_fields(assets,root,config)
-    log.info("field_reconciliation audit_rows=%d",len(audit))
-    from .parse_mapc_gis import process_gis
-    from .spatial_analysis import add_network_proximity
-    layers,gis_report=process_gis(root,config)
-    args._context["gis"]=gis_report
-    warnings.extend(gis_report.get("warnings",[]));errors.extend(gis_report.get("errors",[]))
-    log.info("gis_processed layers=%s",list(layers))
-    assets=add_network_proximity(assets,layers,config)
-    log.info("full_geometry_spatial_proximity_complete")
-    from .transit_data import load_transit
-    from .transit_analysis import add_transit_proximity
-    bundle,transit_report=load_transit(root,config,refresh=args.refresh_transit)
-    args._context["transit"]=transit_report
-    warnings.extend(transit_report.get("warnings",[]))
-    if not transit_report.get("available",False):warnings.append("Official MBTA GTFS unavailable: transit distances are unknown. Recorded MAPC transit tags remain unverified by independent calculation.")
-    assets,discrepancies=add_transit_proximity(assets,bundle,config)
-    assets,audit=reconcile_transit(assets,audit,bundle)
-    transit_report["discrepancy_count"]=len(discrepancies)
-    write_csv(discrepancies,root/"output/data/transit_discrepancies.csv")
-    write_csv(audit,root/"output/data/factcheck_audit.csv")
-    log.info("transit_complete available=%s discrepancies=%d",bool(bundle),len(discrepancies))
-    from .build_site_summary import build_site_summary
-    sites=build_site_summary(assets,config)
-    from .parse_attributes import build_attribute_dictionary,build_amenity_dictionary
-    from .parse_activities import build_activity_dictionary
-    accepted=assets[assets.record_status.eq("accepted")]
-    write_csv(build_attribute_dictionary(accepted,config,root),root/"output/data/attribute_dictionary.csv")
-    write_csv(build_amenity_dictionary(accepted,config,root),root/"output/data/amenity_dictionary.csv")
-    write_csv(build_activity_dictionary(accepted),root/"output/data/activity_dictionary.csv")
-    write_csv(assets[assets.record_status.eq("quarantined")],root/"output/data/quarantined_records.csv")
-    previous=args.previous or config.get("paths",{}).get("previous_asset_file")
+    assets, audit = reconcile_access_fields(assets, root, config)
+
+    # Optional historical source evidence is compared in memory, never exported.
+    # Current transit calculations cannot masquerade as historical source changes.
+    comparison = None
+    previous_input = None
+    previous = config.get("paths", {}).get("previous_asset_file")
     if previous:
         from .compare_versions import compare_versions
-        previous_path=Path(previous);previous_path=previous_path if previous_path.is_absolute() else root/previous_path
-        old,old_report=load_assets(previous_path,config,root);old,_=reconcile_access_fields(old,root,config)
-        args._context["previous_input"]={"path":str(previous_path),"sha256":sha256(previous_path),"source_row_count":old_report["source_row_count"]}
-        # Compare source-derived access, not a current feed against a historical unknown feed.
-        current_source,_=load_assets(source,config,root);current_source,_=reconcile_access_fields(current_source,root,config)
-        changes=compare_versions(current_source,old)
-        if isinstance(changes,tuple):changes=changes[0]
-        write_csv(changes,root/"output/reports/change_report.csv")
-        (root/"output/reports/change_summary.html").write_text(html_page("MAPC export comparison",'<p>Only source-derived access compared. Fuzzy rename candidates are review-only and never auto-applied.</p>'+changes.to_html(index=False,escape=True)),encoding="utf-8")
-    from .analysis import run_analysis
-    from .make_charts import make_charts
-    from .workbook import export_workbooks
-    from .documentation import write_documentation
-    tables=run_analysis(assets,sites,root,config)
-    make_charts(tables,assets,sites,root,config)
-    export_workbooks(assets,sites,tables,root,config)
-    write_documentation(assets,sites,root,config)
-    log.info("analysis_charts_workbooks_documentation_complete")
+        previous_path = Path(previous)
+        previous_path = previous_path if previous_path.is_absolute() else root / previous_path
+        if previous_path.resolve() == source.resolve():
+            raise ProductInputError("The previous-export reference points to the current Airtable CSV. Choose a distinct historical reference in config/config.yaml or clear previous_asset_file.")
+        old, old_schema = load_assets(previous_path, config, root)
+        old, _ = reconcile_access_fields(old, root, config)
+        comparison = compare_versions(assets, old)
+        if isinstance(comparison, tuple):
+            comparison = comparison[0]
+        previous_input = {"path": str(previous_path), "sha256": sha256(previous_path), "source_row_count": old_schema["source_row_count"]}
+
+    print("Calculating GIS and transit proximity...", flush=True)
+    from .parse_mapc_gis import LAYER_PATTERNS, process_gis
+    from .spatial_analysis import add_network_proximity
+    layers, gis_report = process_gis(root, config)
+    warnings.extend(gis_report.get("warnings", []))
+    missing_layers = [name.replace("_", " ") for name in LAYER_PATTERNS if name not in layers]
+    if missing_layers:
+        print("Warning: GIS input is unavailable for " + ", ".join(missing_layers)
+              + ". Related proximity remains Unknown.", flush=True)
+    assets = add_network_proximity(assets, layers, config)
+    from .transit_data import load_transit
+    from .transit_analysis import add_transit_proximity
+    bundle, transit_report = load_transit(root, config)
+    warnings.extend(transit_report.get("warnings", []))
+    if not transit_report.get("available", False):
+        warnings.append("Official MBTA GTFS unavailable: calculated transit distances are unknown; recorded transit evidence is preserved.")
+        print("Warning: MBTA transit data is unavailable. Calculated transit distances remain Unknown; recorded transit evidence is preserved.", flush=True)
+    assets, _ = add_transit_proximity(assets, bundle, config)
+    assets, _ = reconcile_transit(assets, audit, bundle)
+    from .build_site_summary import build_site_summary
+    sites = build_site_summary(assets, config)
+    metadata = {
+        "pipeline_version": __version__, "run_timestamp_utc": timestamp,
+        "status": "Generated from current source inputs", "authoritative_asset_file": source.relative_to(root).as_posix(),
+        "input_files": [{"path": source.relative_to(root).as_posix(), "sha256": schema["source_sha256"]}],
+        "gis": gis_report, "gtfs": transit_report,
+        "input_row_count": schema["source_row_count"], "warnings": warnings,
+        "errors": list(gis_report.get("errors", [])) + list(transit_report.get("errors", [])),
+        "previous_input": previous_input, "comparison_status": "complete" if comparison is not None else "unavailable",
+    }
+    print("Building the interactive management map...", flush=True)
     from .make_map import make_map
-    from .make_static_map import make_static_map
-    # Map metadata describes this run, never a stale manifest from an earlier run.
-    # Final QC is not yet available at this stage and is labelled accordingly.
-    source_relative=source.resolve().relative_to(root).as_posix() if source.resolve().is_relative_to(root) else str(source.resolve())
-    map_snapshot={"pipeline_version":__version__,"run_timestamp_utc":timestamp,
-                  "status":"QC pending at map generation; consult the final QC report",
-                  "authoritative_asset_file":source_relative,
-                  "input_files":[{"path":source_relative,"sha256":sha256(source)}],
-                  "gis":gis_report,"gtfs":transit_report,"unique_assets":len(accepted),
-                  "unique_sites":len(sites),"processed_row_count":len(assets),
-                  "input_row_count":schema.get("source_row_count"),
-                  "warnings":list(warnings),"errors":list(errors),
-                  "previous_input":args._context["previous_input"],"generated_files":[]}
-    change_path=root/"output/reports/change_report.csv"
-    if previous and change_path.exists():
-        map_snapshot["comparison_status"]="complete"
-        map_snapshot["generated_files"]=[{"path":"output/reports/change_report.csv","sha256":sha256(change_path)}]
-    map_report=make_map(assets,layers,bundle,root,config,timestamp,sites=sites,snapshot=map_snapshot)
-    make_static_map(assets,layers,root,config)
-    log.info("map_generated counts=%s",{k:v for k,v in map_report.items() if k.endswith("count")})
-    tests={"unit_and_integration":{"status":"skipped_by_cli"},"map":{"status":"skipped_by_cli"}}
-    if not args.skip_tests:
-        tests["unit_and_integration"]=run_tests(root)
-        log.info("unit_integration_tests %s",tests["unit_and_integration"])
-        from .map_smoke_test import run_map_smoke_test
-        tests["map"]=run_map_smoke_test(root,map_report)
-        log.info("map_smoke_test status=%s",tests["map"]["status"])
-        if tests["map"]["status"]=="unavailable":warnings.append("Browser smoke test unavailable; inspect map_test_results.txt. Browser pass is not claimed.")
-    else:warnings.append("Tests skipped by command-line option. This run is not release-qualified.")
-    from .quality_control import build_qc
-    qc=build_qc(assets,sites,schema,gis_report,transit_report,map_report,tests,root,warnings,errors)
-    args._context["qc"]=qc
-    if baseline:
-        rebuild=verify_rebuild(root,baseline)
-        log.info("clean_rebuild acceptance=%s",rebuild["passed"])
-        if not rebuild["passed"]:errors.append("Clean rebuild canonical CSVs differ from preserved baseline; inspect clean_rebuild_acceptance.json. Release blocked.")
-    from .acceptance import run_acceptance
-    acceptance=run_acceptance(root,assets,sites,layers,tests,baseline)
-    if not acceptance["passed"]:errors.append("Artifact acceptance checks failed; see acceptance_report.json.")
-    # Include final acceptance/rebuild findings in QC before the manifest is sealed.
-    tests["acceptance"]={"status":"passed" if acceptance["passed"] else "failed","check_count":len(acceptance["checks"])}
-    qc=build_qc(assets,sites,schema,gis_report,transit_report,map_report,tests,root,warnings,errors)
-    status="success"
-    if errors or any(t.get("status")=="failed" for t in tests.values()):status="failed"
-    from .provenance import write_manifest
-    log.info("run_outputs_complete status=%s release_requested=%s",status,not args.no_release)
-    if not args.no_release and not args.skip_tests and status=="success":log.info("release_generation_begin version=%s; completion checksum will be in releases/release_index.json",__version__)
-    log.info("run_end status=%s",status)
-    write_manifest(root,timestamp,source,schema,gis_report,transit_report,qc,warnings,errors,status,options,args._context["previous_input"])
-    if status=="failed":raise RuntimeError("Run failed validation. Review QC and test reports; release not created.")
-    if not args.no_release and not args.skip_tests:
-        from .release import create_release
-        release=create_release(root)
-        print(f"Release: {release}")
-    print(f"Complete: {root/'output/reports/QC_report.html'}")
-    return qc
+    result = make_map(assets, layers, bundle, root, config, timestamp,
+                      sites=sites, snapshot=metadata, schema_report=schema, changes=comparison)
+    result["path"] = root / "output/maps/MAPC_access_map.html"
+    log.info("Map generated: %s", {key: value for key, value in result.items() if key != "omissions"})
+    for warning in warnings:
+        log.warning(warning)
+    return result
+
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--ingest-root",action="store_true")
-    parser.add_argument("--refresh-transit",action="store_true")
-    parser.add_argument("--previous",type=Path)
-    parser.add_argument("--clean-rebuild",action="store_true",help="Preserve output in cache/rebuilds, then regenerate from immutable inputs")
-    parser.add_argument("--skip-tests",action="store_true",help="Development only; disables release")
-    parser.add_argument("--no-release",action="store_true")
-    args=parser.parse_args()
-    try:run(args)
-    except Exception as e:
-        root=args.root.resolve();(root/"output/reports").mkdir(parents=True,exist_ok=True)
-        write_json(root/"output/reports/run_failure.json",{"pipeline_version":__version__,"timestamp":datetime.now(timezone.utc).isoformat(),"error":str(e),"traceback":traceback.format_exc()})
-        logging.getLogger("mapc").exception("run_failed %s",e)
-        if not (root/"output/reports/QC_report.html").exists():
-            (root/"output/reports/QC_report.html").write_text(html_page("MAPC run failed",'<p class="warning">'+html.escape(str(e))+'</p><p>No completed release is claimed. Review run_failure.json and pipeline.log.</p>'),encoding="utf-8")
-        from .provenance import write_manifest
-        ctx=getattr(args,"_context",{})
-        write_manifest(root,ctx.get("timestamp",datetime.now(timezone.utc).isoformat()),ctx.get("source"),ctx.get("schema",{}),ctx.get("gis",{}),ctx.get("transit",{}),ctx.get("qc",{}),["Run incomplete; no successful release is claimed."],[str(e)],"failed",ctx.get("run_options",{}),ctx.get("previous_input"))
+    root = Path(__file__).resolve().parents[1]
+    try:
+        generate_map(root)
+        print("MAPC recreation map updated successfully.", flush=True)
+        from .serve_map import serve_map
+        serve_map(root)
+    except KeyboardInterrupt:
+        print("\nMAPC Tool stopped.")
+        return 0
+    except Exception as exc:
+        log = logging.getLogger("mapc")
+        if log.handlers:
+            log.exception("MAPC Tool failed")
+        print(f"\nMAPC Tool could not run.\n\nProblem:\n{exc}", file=sys.stderr)
+        if not isinstance(exc, ProductInputError):
+            print("\nCheck that the project inputs are available and run again. Technical details are in cache/runtime/last_run.log.", file=sys.stderr)
         return 1
     return 0
 
-if __name__=="__main__":raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())

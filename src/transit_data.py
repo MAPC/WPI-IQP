@@ -212,13 +212,9 @@ def load_transit(root: Path, config: dict, refresh: bool = False) -> tuple[dict 
         for feed in bundle["feed_info"]:
             if feed.get("feed_end_date") and feed["feed_end_date"] < datetime.now(timezone.utc).strftime("%Y%m%d"):
                 report["warnings"].append("Cached GTFS validity period has ended; refresh deliberately for current service analysis")
-        output = root / "output/gis"
-        output.mkdir(parents=True, exist_ok=True)
-        bundle["stops"].drop(columns="geometry").to_csv(output / "mbta_stops.csv", index=False)
-        (output / "mbta_stops_web.geojson").write_text(bundle["stops"].to_json(drop_id=True), encoding="utf-8")
         display = bundle["routes"].to_crs("EPSG:26986")
         display.geometry = display.geometry.simplify(10, preserve_topology=True)
-        (output / "mbta_routes_web.geojson").write_text(display.to_crs("EPSG:4326").to_json(drop_id=True), encoding="utf-8")
+        bundle["routes_web"] = display.to_crs("EPSG:4326")
         report["route_web_simplification_metres"] = 10
         return bundle, report
     except Exception as exc:

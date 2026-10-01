@@ -87,3 +87,18 @@ def test_requested_historical_snapshot_never_silently_changes(tmp_path, monkeypa
     bundle, report = load_transit(tmp_path, {"transit": {"snapshot_sha256": "a" * 64}})
     assert bundle is None
     assert "pinned" in report["errors"][0]
+
+
+def test_verified_transit_cache_returns_display_data_without_outputs(tmp_path):
+    feed = fixture_gtfs(tmp_path)
+    digest = hashlib.sha256(feed.read_bytes()).hexdigest()
+    cache = tmp_path / "cache/transit"
+    cache.mkdir(parents=True)
+    (cache / f"{digest}.zip").write_bytes(feed.read_bytes())
+    (cache / "active_snapshot.json").write_text(json.dumps({"sha256": digest}))
+    bundle, report = load_transit(tmp_path, {})
+    assert report["available"] is True
+    assert report["cache_action"] == "reused_verified_snapshot"
+    assert bundle["stops"]["stop_id"].tolist() == ["b", "s"]
+    assert bundle["routes_web"].crs.to_epsg() == 4326
+    assert not (tmp_path / "output").exists()

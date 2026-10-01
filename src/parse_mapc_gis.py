@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 import zipfile
 
@@ -128,8 +127,6 @@ def normalize_layer(frame: gpd.GeoDataFrame, layer: str, codes: dict, config: di
 def process_gis(root: Path, config: dict) -> tuple[dict, dict]:
     root = Path(root)
     input_dir = root / config.get("paths", {}).get("gis", "input/gis")
-    output = root / "output/gis"
-    output.mkdir(parents=True, exist_ok=True)
     code_path = root / "config/mapc_gis_codes.yaml"
     codes = yaml.safe_load(code_path.read_text(encoding="utf-8"))
     report = {"layers": {}, "warnings": [], "errors": [],
@@ -141,9 +138,6 @@ def process_gis(root: Path, config: dict) -> tuple[dict, dict]:
     tolerance = float(config.get("gis", {}).get("web_simplification_tolerance_m", 12.0))
     if tolerance < 0:
         raise ValueError("web_simplification_tolerance_m must be nonnegative")
-    gpkg = output / "mapc_networks.gpkg"
-    if gpkg.exists():
-        gpkg.unlink()
     for layer, pattern in LAYER_PATTERNS.items():
         candidates = sorted(input_dir.glob(pattern))
         if len(candidates) > 1:
@@ -156,7 +150,6 @@ def process_gis(root: Path, config: dict) -> tuple[dict, dict]:
         digest = sha256_file(path)
         normalized = normalize_layer(source, layer, codes, config, path.name, digest)
         layers[layer] = normalized
-        normalized.to_file(gpkg, layer=layer, driver="GPKG", engine="pyogrio")
         keep = normalized[normalized["analysis_include"]].copy()
         web_columns = [c for c in ("source_feature_key", "feature_name", "decoded_fac_stat", "decoded_fac_type",
                                   "decoded_seg_type", "decoded_acc_status", "geometry") if c in keep]
@@ -165,7 +158,9 @@ def process_gis(root: Path, config: dict) -> tuple[dict, dict]:
         web.geometry = web.geometry.simplify(tolerance, preserve_topology=True)
         after_vertices = int(web.geometry.count_coordinates().sum())
         web = web.to_crs("EPSG:4326")
-        (output / f"{layer}_web.geojson").write_text(web.to_json(drop_id=True), encoding="utf-8")
+        # The renderer consumes this display copy in memory. Distances continue
+        # to use every unsimplified source line retained in ``normalized``.
+        normalized.attrs["web_geojson"] = web.to_json(drop_id=True)
         unknowns = {field: int(normalized[field].eq("Unknown").sum())
                     for field in normalized if field.startswith("decoded_")}
         summary = {
@@ -191,6 +186,4 @@ def process_gis(root: Path, config: dict) -> tuple[dict, dict]:
         if layer == "walking_trails" and unknowns.get("decoded_acc_status", 0):
             report["warnings"].append(f"walking_trails: {unknowns['decoded_acc_status']} unknown access statuses excluded")
         report["layers"][layer] = summary
-    (root / "output/reports").mkdir(parents=True, exist_ok=True)
-    (root / "output/reports/gis_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return layers, report

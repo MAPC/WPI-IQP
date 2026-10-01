@@ -10,8 +10,6 @@ pytest-cache-files-*/
 /cache/**
 !/cache/.gitkeep
 !/cache/transit/
-!/cache/rebuilds/
-!/cache/run_history/
 !/cache/input_versions/
 !/cache/external_sources/
 !/cache/*/.gitkeep
@@ -19,8 +17,6 @@ pytest-cache-files-*/
 !/output/.gitkeep
 !/output/*/
 !/output/*/.gitkeep
-/releases/**
-!/releases/.gitkeep
 /input/**
 !/input/.gitkeep
 !/input/assets/

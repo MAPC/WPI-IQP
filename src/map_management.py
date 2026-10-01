@@ -7,10 +7,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from copy import deepcopy
-import hashlib
 import json
 import math
-from pathlib import Path
 
 import pandas as pd
 
@@ -33,7 +31,7 @@ RULES = [
     {"id": "missing_coordinates", "label": "Missing usable coordinates", "rule": "coordinate_usable is not explicitly true. The record remains available in the management list without a marker."},
     {"id": "access_conflict", "label": "Access evidence conflict / unresolved", "rule": "At least one access verification status is conflict_needs_review, conflict, unresolved, needs_review, unresolved_needs_review, evidence_conflict, or unresolved_conflict. Unknown alone and resolved source corrections do not qualify."},
     {"id": "source_warning", "label": "Source / data-quality warning", "rule": "A matching current-source schema row diagnostic, nonempty record_issue, non-unique duplicate_status, or an explicit usable-coordinate correction/warning. Source values are retained."},
-    {"id": "changed", "label": "Changed since previous snapshot", "rule": "The record occurs in a checksummed current-run change report. Its run manifest identifies the current and previous source checksums and is successful, or the current pipeline explicitly confirms that its comparison stage completed before final QC."},
+    {"id": "changed", "label": "Changed since previous snapshot", "rule": "The record occurs in the current in-memory comparison with an explicitly configured previous source export. Source checksums identify both inputs; calculated transit fields are excluded from source-change comparison."},
     {"id": "complete", "label": "No known management issues", "rule": "None of the six issue categories applies. This describes the recorded workflow and QC evidence only, never the quality, safety, or accessibility of a place."},
     {"id": "multiple", "label": "Multiple issues", "rule": "Two or more distinct issue categories apply. Every underlying reason remains visible."},
 ]
@@ -98,18 +96,6 @@ def _record(row):
     return result
 
 
-def _read_json(path):
-    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
-
-
-def _sha256(path):
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def _normal_path(value):
     return str(value or "").replace("\\", "/")
 
@@ -120,11 +106,10 @@ def _source_entry(manifest):
                  if _normal_path(item.get("path")) == source), {})
 
 
-def _schema_diagnostics(root, records, warnings):
-    report = _read_json(root / "output/reports/schema_report.json")
+def _schema_diagnostics(report, records, warnings):
     diagnostics = defaultdict(list)
     if not report:
-        warnings.append("Schema report is unavailable; row-level source warnings cannot be supplemented from schema diagnostics.")
+        warnings.append("Current schema diagnostics are unavailable; row-level source warnings cannot be supplemented.")
         return diagnostics
     # Row numbers are not identities across exports: require both source and hash.
     identities = {(str(row.get("source_sha256") or ""), _normal_path(row.get("source_file"))) for row in records}
@@ -138,55 +123,40 @@ def _schema_diagnostics(root, records, warnings):
     return diagnostics
 
 
-def _changes(root, manifest, records):
+def _changes(manifest, records, frame):
     result = {"enabled": False, "reason": "No comparison snapshot is currently loaded.",
               "records": [], "removed_records": [], "previous_input": deepcopy(manifest.get("previous_input"))}
-    path = root / "output/reports/change_report.csv"
     previous = manifest.get("previous_input")
-    if not previous or not isinstance(previous, dict) or not previous.get("sha256"):
+    if not previous or not isinstance(previous, dict) or not previous.get("sha256") or frame is None:
         return result
-    if not path.is_file():
-        result["reason"] = "The analytical manifest identifies a previous snapshot, but no change report is available."
-        return result
-    entry = next((item for item in manifest.get("generated_files", [])
-                  if _normal_path(item.get("path")) == "output/reports/change_report.csv"), {})
     source = _source_entry(manifest)
     checksums = {row.get("source_sha256") for row in records if row.get("source_sha256")}
-    comparison_complete = manifest.get("status") == "success" or manifest.get("comparison_status") == "complete"
-    if (not comparison_complete or not manifest.get("run_timestamp_utc")
-            or not entry.get("sha256") or entry["sha256"] != _sha256(path)
+    if (manifest.get("comparison_status") != "complete" or not manifest.get("run_timestamp_utc")
             or not source.get("sha256") or checksums != {source["sha256"]}):
-        result["reason"] = "The available change report could not be verified against this successful analytical run and source checksum. Change review is disabled."
-        return result
-    try:
-        frame = pd.read_csv(path, dtype=str, keep_default_na=False)
-    except (pd.errors.EmptyDataError, pd.errors.ParserError):
-        result["reason"] = "The change report is empty or malformed. Change review is disabled."
+        result["reason"] = "The comparison inputs could not be verified against the current source checksum. Change review is disabled."
         return result
     required = {"change_type", "source_record_key", "previous_record_key", "asset_name", "site_name", "field", "previous_value", "current_value", "match_method", "review_note"}
     if not required.issubset(frame.columns) or not frame["change_type"].isin(CHANGE_LABELS).all():
-        result["reason"] = "The change report has an unsupported schema or change type. Change review is disabled."
+        result["reason"] = "The comparison has an unsupported schema or change type. Change review is disabled."
         return result
     rows = [_record(row) for row in frame.to_dict("records")]
     for row in rows:
         row["label"] = CHANGE_LABELS[row["change_type"]]
-    result.update(enabled=True, reason="Verified comparison for the current analytical snapshot.", records=rows,
-                  removed_records=[row for row in rows if row["change_type"] == "removed_asset"],
-                  report_sha256=entry["sha256"])
+    result.update(enabled=True, reason="Comparison of the current and previous source exports.", records=rows,
+                  removed_records=[row for row in rows if row["change_type"] == "removed_asset"])
     return result
 
 
-def build_management(assets, sites, manifest, root):
+def build_management(assets, sites, manifest, root=None, *, schema_report=None, changes=None):
     """Return detached JSON-serializable management data, without writing files.
 
     Existing site aggregation is reconciled with every accepted asset. Invalid
     site membership/counts fail explicitly rather than presenting false progress.
     """
-    root = Path(root)
     records = [_record(row) for row in assets.to_dict("records") if row.get("record_status", "accepted") == "accepted"]
     warnings = []
-    diagnostics = _schema_diagnostics(root, records, warnings)
-    changes = _changes(root, manifest, records)
+    diagnostics = _schema_diagnostics(schema_report, records, warnings)
+    changes = _changes(manifest, records, changes)
     changes_by_key = defaultdict(list)
     for change in changes["records"]:
         if change["change_type"] != "removed_asset":

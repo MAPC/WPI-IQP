@@ -60,14 +60,7 @@ def load_assets(path, config=None, root=None):
         headers = next(reader, None)
         if headers is None:
             headers = []
-        previous_headers = None
-        prior_schema = root / "output/reports/schema_snapshot.json"
-        if prior_schema.exists():
-            try:
-                previous_headers = json.loads(prior_schema.read_text(encoding="utf-8")).get("input_columns")
-            except (ValueError, OSError):
-                previous_headers = None
-        report = validate_schema(headers, schema, aliases, previous_headers=previous_headers)
+        report = validate_schema(headers, schema, aliases)
         mapping = report["column_mapping"]
         previous_line = reader.line_num
         for source_record_index, cells in enumerate(reader, start=1):
