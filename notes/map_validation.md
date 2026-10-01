@@ -29,12 +29,29 @@ Fractional zoom is checked at both 10.1 with a 0.1 increment and 10.25 with a 0.
 
 Regression fixtures cover overlapping validation/temporary reveal layers, source physical-line labels, MBTA retrieval dates, offline file safeguards, usable hover content and unobscured mobile controls. They use a tiny local dataset and no public tile requests.
 
+## Final results — 2026-09-30 evening, America/New_York
+
+The final resumption retained the completed hover/mobile fixes and finished their regression verification. The UI fixture now starts a fresh document when resizing, passes the browser wait argument by keyword, and waits for the zoom animation before the opposite click. These changes repair test setup/timing without weakening the interaction assertions.
+
+| Evidence | Result and scope |
+|---|---|
+| Management-model and map-rebuild tests | 26 passed in 1.49 s; retained earlier result from this redesign |
+| Map rendering and exact half-mile configuration | 5 passed in 0.37 s; retained earlier result from this redesign |
+| Final `tests/test_map_ui.py` run | 7 passed in 5.50 s |
+| Final `python -m src.rebuild_map` | Successful; all 61 protected analytical outputs unchanged |
+| Final `python -m src.map_smoke_test --headed` | 14 checks passed in Edge; 24 initial online tiles, zero tile errors, no fatal JavaScript errors; offline and mobile checks included |
+| Final baseline preservation audit | 97 of 97 files unchanged; zero discrepancies |
+
+The hover regression uses actual pointer movement from a marker into its card, waits beyond the close delay, scrolls to the last of 40 activities, and confirms the map zoom stays unchanged. Mobile regressions at 390 × 844 and 360 × 640 expand the management panel and summary, verify neither zoom control is covered, then click both controls. The final production-map browser pass followed these tests and the final rendering.
+
+All 13 final screenshots in `output/reports/map_screenshots/` were visually reviewed. The hover card has a usable scroll region; the expanded mobile panel ends above the zoom controls; source/audited conflict evidence remains distinct; queue and drawer content is legible; missing coordinates are explicit; online attribution and offline local content remain visible. No remaining visual issue was identified. The screenshot review is an additional visual check, not a substitute for the pointer and click regressions.
+
 ## Evidence and scope
 
 - `output/reports/map_model_test_results.txt`: management-model and map-rebuild tests.
 - `output/reports/map_render_test_results.txt`: marker rendering/configuration tests.
 - `output/reports/map_ui_fixture_test_results.txt`: focused browser regressions.
-- `output/reports/map_management_headless_results.json`: blocked-network browser pass.
+- `output/reports/map_management_headless_results.json`: earlier blocked-network browser pass, before the last hover/mobile fixes. The final headed pass also checks offline operation on the final HTML.
 - `output/reports/map_management_test_results.json`: final headed browser pass.
 - `output/reports/map_screenshots/`: actual regional, close, hover, selected, evidence, issue, missing-coordinate, transportation, mobile and offline views.
 - `output/reports/map_build_manifest.json`: map hash, linked analytical manifest and current validation evidence.

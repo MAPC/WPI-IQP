@@ -1,14 +1,47 @@
 # MAPC work progress
 
-Updated: 2026-09-30, after successful clean rebuild. Earlier checkpoint sections below are a historical work log.
+Updated: 2026-09-30 evening, America/New_York (2026-10-01 UTC). The current completion checkpoint below supersedes earlier next-step instructions. Older sections are retained as historical evidence.
 
-## Inventory management map update — in progress (2026-09-30)
+## Inventory management map update — complete
 
-Active root: C:/Users/Jaeyun/Desktop/MAPC Ultimate Deliverables. Documents/WPI-IQP is an identical Git/main commit 55cb526 copy with the same analytical manifest checksum; the current Desktop workspace includes the working environment. Both started clean. The completed analytical build below remains verified historical evidence. This new task covers safe root cleanup, macOS/Linux launcher, management map UI, and targeted tests only. No new analytical processing is required. Counts remain 211 accepted assets, 131 sites, 171 mapped (101 field validated, 70 unfinished), 40 without coordinates, and 27 staff reviewed. External MAPC GIS and frozen MBTA cache are retained. Known source warnings remain unchanged.
+Active root: `C:/Users/Jaeyun/Desktop/MAPC Ultimate Deliverables`. Branch `main`, latest commit `c014411` at resumption. The working tree already contained the completed cleanup, management model, launcher, redesigned map, integration, and most browser validation. The last two visual fixes and their regression fixtures had also survived on disk. No source was reset or reverted, and no edits attributable to the mistaken macOS debugging direction needed undoing.
 
-Next: verify cleanup hashes, build the display-only management model from saved outputs, render the redesigned map, and run targeted unit/browser checks. Baseline hashes of source/reference, analytical CSVs/workbooks/GIS/charts, static maps, frozen transit, original manifest/QC and release are in notes/map_redesign_baseline.json. The existing release remains the pre-redesign analytical release; current UI provenance will be recorded separately.
+The remaining work was to finish verification of hover scrolling and mobile control spacing, run the final map/browser pass, review screenshots, and close the documentation. That work is complete:
 
-## Previously completed analytical state
+- Hover cards accept the pointer, stay open while it is inside, and scroll the complete lists without zooming the map. The regression reaches the last of 40 fixture activities.
+- The expanded mobile management panel reserves room for both zoom buttons. Regression checks at 390 × 844 and 360 × 640 verify geometry, pointer hit targets, and working zoom-in/out clicks.
+- The saved regression fixture needed a fresh document to avoid redeclaring JavaScript constants, the correct keyword argument for the browser wait, and completion of the zoom animation before the opposite click. Those test defects are repaired.
+- The map was rendered once from existing saved outputs after those fixes. Its 61 analytical output checksums remained unchanged.
+- Final visible Edge browser QA passed all 14 checks, including online tiles and offline/mobile operation; 24 initial street tiles loaded with zero tile errors, and no fatal JavaScript errors occurred. Both 0.1 and 0.25 fractional zoom increments were verified.
+- All 13 final screenshots were visually reviewed, including the usable hover, expanded mobile panel, conflict evidence, missing-coordinate queue, mobile drawer and offline map. No remaining visual defect was identified.
+
+### Files and modules delivered
+
+The completed redesign is in `src/map_ui.html`, `src/map_management.py`, `src/make_map.py`, `src/rebuild_map.py`, `src/serve_map.py`, and `src/map_smoke_test.py`, with map configuration, pipeline snapshot integration, package-data inclusion, acceptance wording and related tests. Cleanup/launcher work is recorded in `notes/project_organization.md` and `bootstrap/root_cleanup_report.*`. The final resumption changed `tests/test_map_ui.py`, README, this progress note, `notes/map_validation.md`, and added `notes/MAP_HANDOFF.md`; generated HTML, screenshots and UI-specific QA/provenance reports were refreshed.
+
+### Verification and preserved state
+
+| Check | Actual result |
+|---|---|
+| Management model + map-only rebuild tests, already completed during this redesign | 26 passed |
+| Rendering + exact half-mile configuration tests, already completed during this redesign | 5 passed |
+| Final focused UI regression run | 7 passed in 5.50 s |
+| Final headed Edge browser pass after map-only rebuild | 14 checks passed; no reported errors or limitations |
+| Final preservation comparison against `notes/map_redesign_baseline.json` | 97 of 97 protected files unchanged; zero missing/changed |
+
+Current pipeline stage: management-map implementation, integration, targeted validation and handoff complete. No required implementation remains for this revision. The parser, GIS/transit analysis, workbooks, charts, static maps, historical full-suite run and clean-rebuild acceptance were retained; none was rerun to finish the UI. Current evidence is separate from the historical analytical manifest and QC report.
+
+Current counts: 213 source rows, 211 accepted assets, 2 blank quarantine rows, 131 sites, 101 field validated, 27 staff reviewed, 171 mapped (101 validated + 70 unfinished), and 40 accepted records without coordinates. Management counts: 110 awaiting field completion, 184 awaiting staff review, 4 records/4 fields with unresolved access evidence, 2 source warnings, 24 records with no known management issues, and 113 with multiple categories. Site counts: 68 fully field validated, 0 partial, 63 with none recorded; 112 need staff review and 16 have no known management issues. Counts overlap where categories do.
+
+External data successfully acquired earlier remain intact: four supplied MAPC GIS networks (83,749 source features), verified official MAPC metadata/code definitions, and frozen official MBTA feed SHA-256 `da552d2330c9b85c2ad7ddb5d71012bb9539b2ba5b822d7000d7a3606ec79296` (7,877 stops/stations and 1,163 shapes). No source data or transit feed was reacquired.
+
+Known limitations: 40 missing coordinates, two retained Municipality values `02176`, four unresolved access conflicts, and fallback identities remain source-review items. No previous-input comparison is loaded, so change review is disabled with an explanation. Street tiles require the local HTTP viewer and internet; direct-file/offline use retains local inventory and overlays. Native macOS/Linux execution is not verified; no macOS debugging was undertaken. See the handoff for exact scope.
+
+Final map: `output/maps/MAPC_access_map.html`. Open the street-map viewer with `.venv\Scripts\python -m src.serve_map` on Windows, or `python -m src.serve_map` in the activated environment. The exact next recommended step is to use the completed read-only map and review the existing source issues; no pipeline run is needed to view it. For a future presentation change, use `python -m src.rebuild_map`; a future input update follows README's full-build workflow.
+
+The unchanged analytical release is `releases/MAPC_Recreation_Analysis_2026-09-30_1.0.0_140509809545.zip`. It predates this redesign and does not contain the current UI. No new release archive or full clean rebuild was created for this presentation-only completion. Current map provenance and validation hashes are in `output/reports/map_build_manifest.json`. Full final handoff: `notes/MAP_HANDOFF.md`.
+
+## Previously completed analytical state (historical checkpoint)
 
 The project is **complete**. The complete software/data build and required clean-rebuild acceptance passed. Current run manifest status is **success**, with no errors. Release packaging and archived-file checksum/ZIP integrity verification also passed. The release is `releases/MAPC_Recreation_Analysis_2026-09-30_1.0.0.zip`; its final byte size and checksum are in `releases/release_index.json`. Earlier failures below have been repaired, their outputs archived, and they do not describe the current deliverables.
 
