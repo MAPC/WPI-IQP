@@ -177,6 +177,8 @@ def run(args):
                   "input_files":[{"path":source_relative,"sha256":sha256(source)}],
                   "gis":gis_report,"gtfs":transit_report,"unique_assets":len(accepted),
                   "unique_sites":len(sites),"processed_row_count":len(assets),
+                  "input_row_count":schema.get("source_row_count"),
+                  "warnings":list(warnings),"errors":list(errors),
                   "previous_input":args._context["previous_input"],"generated_files":[]}
     change_path=root/"output/reports/change_report.csv"
     if previous and change_path.exists():

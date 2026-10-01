@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 pytest-cache-files-*/
 .DS_Store
+.map-model-test-temp/
 
 # Keep the folder layout in Git; raw data and generated contents stay local.
 /cache/**

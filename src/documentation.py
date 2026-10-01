@@ -238,7 +238,7 @@ def write_documentation(assets, sites, root, config):
 
 The current full MAPC recreation inventory CSV in `input/assets/` is the primary source. Local official MAPC zipped Shapefiles in `input/gis/` supply authoritative line geometry. Their base-column CSVs are reference material, not geometry substitutes. Supplied field guides inform definitions. Previous fact-check workbooks/CSVs are review references and are never treated as authoritative current inventory. Official MBTA GTFS supports an independently calculated transit comparison when available.
 
-Original root files and copied input bytes are immutable. `bootstrap/root_inventory.csv` records filenames, sizes, SHA-256 and placement. Each run manifest records source, configuration, code and GTFS checksums. Generated outputs are written under `output/`; downloaded/extracted inputs are cached. The same source and cached transit snapshot, configuration and software version reproduce analytical values; run timestamps and package metadata naturally change.
+Authoritative source bytes are preserved in the organized input/reference folders. `bootstrap/root_inventory.csv` records original filenames, sizes, SHA-256 and placement; `bootstrap/root_cleanup_report.csv` records the later removal of checksum-identical loose root copies. Each run manifest records source, configuration, code and GTFS checksums. Generated outputs are written under `output/`; downloaded/extracted inputs are cached. The same source and cached transit snapshot, configuration and software version reproduce analytical values; run timestamps and package metadata naturally change.
 
 ## Schema, records and identities
 

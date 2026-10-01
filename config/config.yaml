@@ -26,14 +26,21 @@ gis:
 map:
   size_metric: attribute_count
   size_thresholds: [0, 3, 6, 9, 12]
-  size_radii: [4, 6, 9, 12, 15]
+  size_radii: [5, 8, 12, 17, 23]
   colors:
-    Transit + free parking: '#0072B2'
-    Transit only: '#E69F00'
-    Free parking only: '#AA4499'
-    Neither: '#444444'
-    Unknown / unresolved: '#B7BEC7'
+    Transit + free parking: '#0077C8'
+    Transit only: '#FFB000'
+    Free parking only: '#C2187A'
+    Neither: '#3D4650'
+    Unknown / unresolved: '#AAB4BE'
   online_basemap: true
+  basemap_name: OpenStreetMap Standard
+  basemap_url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  basemap_attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+  zoom_snap: 0.25
+  zoom_delta: 0.25
+  wheel_px_per_zoom_level: 120
+  wheel_debounce_time: 40
 validation:
   true_values: [checked, 'true', 'yes', '1', complete, completed, finished]
   false_values: [unchecked, 'false', 'no', '0', incomplete, unfinished]

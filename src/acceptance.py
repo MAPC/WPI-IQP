@@ -46,7 +46,7 @@ def run_acceptance(root,assets,sites,layers,tests,baseline=None):
     add("Unit and integration tests",tests["unit_and_integration"]["status"]=="passed",tests["unit_and_integration"].get("summary",tests["unit_and_integration"]["status"]))
     browser=tests["map"]["status"]
     add("Browser smoke test or documented environment limitation",browser in ("passed","unavailable"),browser)
-    if browser=="passed":add("Browser screenshots",(root/"output/reports/map_smoke_test.png").exists() and (root/"output/reports/map_offline_test.png").exists(),"Online and offline screenshots saved")
+    if browser=="passed":add("Browser screenshots",(root/"output/reports/map_smoke_test.png").exists() and (root/"output/reports/map_offline_test.png").exists(),"Desktop and offline screenshots saved; online tile verification is reported separately by the browser check")
     if baseline:
         rebuild=json.loads((root/"output/reports/clean_rebuild_acceptance.json").read_text())
         add("Clean rebuild canonical CSV reproduction",rebuild["passed"],f"{len(rebuild['checks'])} canonical files compared against preserved baseline")

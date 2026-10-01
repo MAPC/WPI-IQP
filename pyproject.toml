@@ -16,7 +16,7 @@ dependencies = {file = ["requirements.txt"]}
 include = ["src*"]
 
 [tool.setuptools.package-data]
-src = ["vendor/*"]
+src = ["vendor/*", "map_ui.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
