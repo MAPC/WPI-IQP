@@ -48,8 +48,8 @@ def reconcile_transit(assets,audit,bundle):
             value=r.get("near_public_transit_calculated","UNKNOWN")
             if value not in ("YES","NO") or r.record_status!="accepted":continue
             original=r["near_public_transit_original_value"]
-            status="corrected_from_external_source" if original in ("YES","NO") and original!=value else "externally_verified"
-            evidence=f"Nearest scheduled MBTA stop/station {r['nearest_transit_stop']} ({r['nearest_transit_stop_id']}), {r['nearest_transit_distance_miles']:.6f} miles; projected EPSG:26986 point distance; <= 0.5 mile rule. Proximity does not verify a walkable route."
+            status="externally_verified"
+            evidence=f"Separate calculated proximity across all eligible served MBTA modes, including buses and ferries. Nearest scheduled MBTA stop/station {r['nearest_transit_stop']} ({r['nearest_transit_stop_id']}), {r['nearest_transit_distance_miles']:.6f} miles; projected {r.get('transit_calculation_crs', 'EPSG:26986')} point distance; <= 0.5 mile rule. This does not validate the source tagging policy or a walkable route."
             src=f"Official MBTA GTFS {source.get('source_url',source.get('url','https://cdn.mbta.com/MBTA_GTFS.zip'))}; snapshot SHA-256 {r.get('transit_snapshot_sha256','')}"
             for suffix,v in [("",value),("_audited_value",value),("_verification_status",status),("_evidence",evidence),("_source",src)]:assets.at[i,"near_public_transit"+suffix]=v
             mask=audit.source_row_uid.eq(r.source_row_uid)&audit.field.eq("near_public_transit")

@@ -102,3 +102,16 @@ def test_verified_transit_cache_returns_display_data_without_outputs(tmp_path):
     assert bundle["stops"]["stop_id"].tolist() == ["b", "s"]
     assert bundle["routes_web"].crs.to_epsg() == 4326
     assert not (tmp_path / "output").exists()
+
+
+def test_transit_outside_evidence_coverage_keeps_valid_location_and_recorded_tag():
+    frame = pd.DataFrame({"latitude": [42, 34], "longitude": [-71, -118],
+                          "coordinate_usable": [True, True], "near_public_transit_original_value": ["UNKNOWN", "YES"]})
+    stops = gpd.GeoDataFrame({"stop_id": ["s"], "stop_name": ["Station"], "mode": ["Bus"], "routes": ["1"]},
+                            geometry=[Point(-71, 42)], crs=4326)
+    result, _ = add_transit_proximity(frame, {"stops": stops}, {})
+    assert result.near_public_transit_calculated.tolist() == ["YES", "UNKNOWN"]
+    assert result.coordinate_usable.all()
+    assert result.near_public_transit_original_value.iloc[1] == "YES"
+    assert result.transit_calculation_status.iloc[1] == "outside_evidence_coverage"
+    assert pd.isna(result.nearest_transit_distance_miles.iloc[1])

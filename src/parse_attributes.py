@@ -59,8 +59,14 @@ def parse_attributes(raw, taxonomy=None):
     attributes = parse_multivalue(raw)
     taxonomy = taxonomy or load_taxonomy()
     amenities = [attribute for attribute in attributes if classify_attribute(attribute, taxonomy).get("is_amenity", False)]
+    accessibility = [attribute for attribute in attributes
+                     if classify_attribute(attribute, taxonomy).get("classification") == "accessibility"]
+    characteristics = [attribute for attribute in attributes
+                       if classify_attribute(attribute, taxonomy).get("classification") == "site_characteristic"]
     return {"attribute_list": attributes, "attribute_count": len(attributes),
-            "amenity_list": amenities, "amenity_count": len(amenities)}
+            "amenity_list": amenities, "amenity_count": len(amenities),
+            "accessibility_feature_list": accessibility, "accessibility_feature_count": len(accessibility),
+            "site_characteristic_list": characteristics}
 
 
 def build_attribute_dictionary(df, config=None, root=None):

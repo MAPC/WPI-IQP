@@ -10,7 +10,8 @@ def marker_radius(count, config):
     value = float(count or 0)
     if not math.isfinite(value):
         value = 0
-    return m["size_radii"][max(0, bisect.bisect_right(m["size_thresholds"], value) - 1)]
+    thresholds = m.get("general_size_thresholds", m["size_thresholds"]) if m.get("size_metric") == "attribute_count" else m["size_thresholds"]
+    return m["size_radii"][max(0, bisect.bisect_right(thresholds, value) - 1)]
 
 
 def _json(value):

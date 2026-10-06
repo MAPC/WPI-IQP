@@ -1,3 +1,17 @@
+# MAPC interpretation update — 2026-10-06
+
+Version 1.2.0 is implemented and validated. The prior launcher/cleanup work was preserved. Accessibility-only default sizing, optional all-attribute sizing, clearer tag/evidence labels and subset lists, parking/aisle separation, remote-restroom scoping, advisory inventory bounds and independent evidence coverage are complete.
+
+151 repository tests and 12 visible Edge QA groups passed; 10 screenshots were reviewed. The generated map is 42,804,139 bytes. All 211 accepted identities and original tag values are preserved, with 171 mapped and 40 unmapped records. GIS/transit distances and transportation profiles are unchanged; 40 protected files retain their checksums. Current conflicts: 1 (previously 4). There is no new release archive.
+
+The remaining decision is rail-only versus all-mode calculated transit. The existing all-mode calculation is preserved and distinguished from recorded tags. Regional evidence coverage and conservative narrative matching remain limits. Native macOS was not tested here.
+
+See `WORK_PROGRESS.md` for the full file list, assessment changes, tests and exact next step. See `INTERPRETATION_REVIEW.md` for the original requirements and their disposition.
+
+---
+
+## Historical checkpoint (2026-10-01; counts and semantics below are superseded above)
+
 # MAPC Recreation Inventory Tool — final handoff
 
 Completed 2026-10-01, version 1.1.0. The product is the interactive management map, regenerated and opened by one shared workflow. No release ZIP was created.

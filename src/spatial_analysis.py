@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from pyproj import CRS
 from shapely import STRtree
+from .geographic_coverage import coverage_mask
 
 METRES_PER_MILE = 1609.344
 METRES_PER_FOOT = 0.3048
@@ -63,13 +64,18 @@ def distance_flag(distance_miles: pd.Series, threshold: float) -> pd.Series:
 def add_network_proximity(df: pd.DataFrame, layers: dict, config: dict) -> pd.DataFrame:
     out = df.copy()
     crs = config.get("gis", {}).get("analysis_crs", "EPSG:26986")
-    points = asset_points(out, crs)
+    covered = coverage_mask(out, config.get("gis", {}))
+    valid = valid_coordinate_mask(out)
+    points = asset_points(out.loc[covered], crs)
     for layer, prefix in (("bicycle_facilities", "bike_facility"),
                           ("shared_use_paths", "shared_use_path"), ("walking_trails", "walking_trail")):
         out[f"nearest_{prefix}_name"] = pd.Series(pd.NA, index=out.index, dtype="object")
         out[f"nearest_{prefix}_source_feature_key"] = pd.Series(pd.NA, index=out.index, dtype="object")
         out[f"nearest_{prefix}_distance_ft"] = np.nan
         out[f"nearest_{prefix}_distance_miles"] = np.nan
+        status_field = f"{prefix}_calculation_status"
+        out[status_field] = np.where(~valid, "coordinate_unavailable",
+                                    np.where(~covered, "outside_evidence_coverage", "dataset_unavailable_or_no_eligible_features"))
         if prefix == "bike_facility":
             out[f"nearest_{prefix}_type"] = pd.Series(pd.NA, index=out.index, dtype="object")
         frame = layers.get(layer)
@@ -77,6 +83,7 @@ def add_network_proximity(df: pd.DataFrame, layers: dict, config: dict) -> pd.Da
             eligible = frame[frame["analysis_include"].eq(True)].copy().reset_index(drop=True)
             matches = nearest_geometry(points, eligible)
             if not matches.empty:
+                out.loc[matches.index, status_field] = "calculated_supplied_gis"
                 nearest = eligible.iloc[matches["feature_position"].astype(int)].copy()
                 nearest.index = matches.index
                 out.loc[matches.index, f"nearest_{prefix}_name"] = nearest["feature_name"]

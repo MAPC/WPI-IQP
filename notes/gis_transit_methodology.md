@@ -73,3 +73,9 @@ Derived fields are `nearest_transit_stop`, `nearest_transit_stop_id`, `nearest_t
 ## Verification
 
 Automated tests exercise direct ZIP loading, observed CRS detection, missing CRS rejection, verified domain mapping, unknown-code handling, planned/private/closed/lost exclusions, retention of full geometry, network gaps, true point-to-line distance, deterministic ties, rejection of degree-based distances, empty-network behavior, coordinate repairs/quarantine, exact half-mile boundaries, stop/parent eligibility, modal classification, feed failure, source-value preservation, checksum tampering, and historical snapshot pinning. Tests use small synthetic fixtures and do not require a live internet connection.
+
+## Geographic coverage and interpretation update — 2026-10-06
+
+Valid global inventory locations are mapped independently of evidence coverage. GIS and transit each use their own configured `coverage_bounds`; outside bounds (or when bounds are null), distance fields remain missing and flags UNKNOWN. Per-layer calculation statuses explain unavailable coordinates, unavailable eligible evidence, or out-of-coverage conditions. Changing the inventory study area does not expand these scopes. Supply verified regional layers and an appropriate projected metre CRS before changing GIS coverage. The MBTA feed is not a universal transit dataset.
+
+Transit uses the configured metric analysis CRS (currently EPSG:26986). The existing all-MBTA-mode, cached static-feed calculation is preserved, while the drawer explicitly separates it from recorded tag presence. A difference is no longer described as a correction to the source tagging policy. Rail-only versus all-mode policy remains open; no new feed was fetched.

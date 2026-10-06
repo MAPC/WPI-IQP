@@ -1,47 +1,56 @@
-# Work progress — final map product
+# Work progress — interpretation fixes
 
-Updated 2026-10-01. Status: implementation and requested Windows/browser validation complete. This checkpoint supersedes the earlier research-deliverables workflow. There is one product workflow and no outstanding implementation stage.
+Updated 2026-10-06, version 1.2.0. Implementation, targeted tests, generated-map browser QA and final repository tests are complete. This checkpoint supersedes the 2026-10-01 progress entry; the previous map-only product and cleanup were preserved.
 
-## Completed before the last resumption
+## Completed before resumption
 
-The management-map redesign, source organization, underlying parser/GIS/transit/site/evidence calculations, hidden-marker filtering and static missing-coordinate metric were already on disk. Snapshot/export removal and the in-memory map-only refactor, shared launcher and dependency cleanup had been saved. Core and shared-launcher checks had passed. Hover dismissal still needed the exact accidental-reopening regression fixed; the real Windows run, final full-data browser pass, output cleanup and final documentation remained unfinished.
+The shared Windows/macOS launcher, in-memory map-only pipeline, management redesign, marker-hiding filters, passive missing-coordinate metric, immediate hover dismissal, mobile zoom layout and previous browser tests were already complete. The only initial untracked file was `notes/INTERPRETATION_REVIEW.md`; no unfinished earlier implementation was discarded.
 
 ## Completed now
 
-- Reproduced and fixed card-to-marker accidental reopening. Kept scrollable lists, a 220 ms marker-to-card bridge, immediate card exit and intentional later hover. Sixteen focused UI checks pass.
-- Finished removing Snapshot and CSV export UI/functions and unused legacy popup HTML. Review Queue is the only queue selector; search/queue remove nonmatches completely.
-- Finished one shared product workflow: OS launcher → environment/package setup → parse/reconcile/GIS/transit/site/management in memory → one atomic HTML → local server/default browser.
-- Added friendly input/setup/processing failures and concise missing-evidence warnings. Existing UNKNOWN/source-preservation semantics remain intact.
-- Audited imports and removed unused reporting/chart/workbook/static-map/release/acceptance/bootstrap/rebuild code, related output-only tests and obsolete recovery/preview helpers. Retained actual parsing/calculation/model/browser regression tests.
-- Removed 1,059 obsolete generated files (about 1.79 GiB), including old visible outputs, releases and disposable historical QA/rebuild caches. Preserved original inputs, references, source archives and the required GTFS cache.
-- Ran the real Windows BAT workflow once on the current source. It generated the map in about 20 seconds, started localhost automatically and invoked the default browser. HTTP verified the current HTML. No old output folders were recreated.
-- Final visible Edge QA passed all 10 groups with zero JavaScript errors. Seven screenshots reviewed; online, offline and mobile checks passed.
-- Rewrote README and methodology/organization/handoff/validation notes for the final product. Software version is 1.1.0.
+- Default circle size counts seven explicitly classified accessibility tag types, excluding general characteristics, activities and unrelated amenity/policy tags. An independent Circle size selector switches to all Attributes. Legend, hover and drawer counts update without refreshing or changing filters, colors, selection or source records.
+- Added explicit accessibility and site-characteristic subsets in the drawer; clarified amenity tags, activities, tag absence, checkbox completion and ZIP-code-like municipality warnings.
+- Designated accessible parking and access-aisle conditions are assessed separately. Original observations remain visible; no compliance determination is inferred. Missing aisles alone no longer negate designated spaces.
+- Restroom evidence explicitly describing another entrance/location is excluded from the local assessment. F. Gilbert Hills OHV Parking now has assessed restrooms NO from its local narrative, with the remote-main-entrance evidence explained separately.
+- Valid global coordinates outside the advisory study area remain mapped. Without an explicit expected area, ambiguous globally valid coordinate orders are not swapped. Separate GIS/transit coverage settings prevent out-of-coverage locations from receiving a false proximity NO.
+- Recorded Attributes tag presence is distinct from assessed values and calculated MBTA proximity. The existing all-MBTA-mode calculation is retained; it is no longer described as a correction to the source tagging policy.
 
-## Files/modules
+## Files/modules changed
 
-New entry files: `Run_MAPC_Tool.bat`, executable `Run_MAPC_Tool.command`, `launch_mapc.py`, `requirements-dev.txt`, `tests/test_launcher.py`, `tests/browser_map_qa.py`.
+- Map/config: `src/map_ui.html`, `src/make_map.py`, `src/config.py`, `config/config.yaml`.
+- Parsing/evidence/coverage: `src/parse_attributes.py`, `src/parse_coordinates.py`, `src/geographic_coverage.py` (new), `src/parse_assets.py`, `src/reconcile_access_fields.py`, `src/spatial_analysis.py`, `src/transit_analysis.py`, `src/pipeline.py`.
+- Version: `src/__init__.py`, `pyproject.toml` (1.2.0).
+- Tests: `tests/test_attributes.py`, `test_coordinates.py`, `test_access_profiles.py`, `test_spatial.py`, `test_transit.py`, `test_map_ui.py`, `browser_map_qa.py`.
+- Documentation: README, CHANGELOG and the interpretation, asset-methodology, GIS/transit-methodology, management-rules, progress, validation and handoff notes.
+- Regenerated product: `output/maps/MAPC_access_map.html`.
 
-Updated runtime: `src/pipeline.py`, `make_map.py`, `map_management.py`, `map_ui.html`, `serve_map.py`, `parse_assets.py`, `parse_mapc_gis.py`, `transit_data.py`, `config.py`, `utils.py`, `__init__.py`; config, requirements, package metadata, ignore/line-ending rules and corresponding tests/docs.
+## Current data and evidence
 
-Final generated output: only `output/maps/MAPC_access_map.html`. Runtime logs are small internal files in `cache/runtime/`; the official source feed/provenance remains in `cache/transit/`. Development validation evidence is internal and is not regenerated by launchers.
+213 source rows; 211 accepted; 2 blank quarantined; 131 sites; 171 mapped; 40 without coordinates; 101 field validated; 27 staff reviewed. Access-conflict records changed from 4 to 1, records with no known management issues from 24 to 26, and sites with no known issues from 16 to 18. Two municipality warnings remain. The remaining conflict is the recorded Accessible Parking tag versus explicit absence of designated spaces at Daniel Webster Wildlife Sanctuary Parking Lot.
 
-## Current data and preservation
+The corrected rules changed 15 assessed parking values and 1 assessed restroom value. Raw source fields and all tag-derived original access values are unchanged. All current coordinates, GIS/transit distances and flags, transportation profiles, identities, recorded tags and workflow fields match the saved pre-change baseline. Forty protected input/reference/feed files have unchanged SHA-256 checksums. The corrected rule applies consistently across records, including World's End and other locations describing spaces without aisles; it is not a hard-coded name override.
 
-213 source rows; 211 accepted; 2 blank quarantined in memory; 131 sites; 171 mapped; 40 accepted missing-coordinate records; 101 field validated; 27 staff reviewed; 4 unresolved access-conflict records; 2 source-warning records; 24 without known management issues. No coordinates were invented.
+Existing GIS evidence was reused: full-resolution source geometry; eligible bicycle 9,707, shared-use 4,665 and walking 54,089 features. Cached MBTA evidence remains 7,877 eligible stops and 1,163 shapes, feed SHA-256 `da552d2330c9b85c2ad7ddb5d71012bb9539b2ba5b822d7000d7a3606ec79296`. No feed refresh or external acquisition was needed.
 
-All accepted record/site fields, marker semantics and summary counts match the preserved pre-refactor map exactly. All 26 protected input/reference/feed checksums match. Full source GIS remains 83,749 features; eligible lines: bicycle 9,707, shared-use 4,665, walking 54,089 and LandLine 2,723. Required full-line distance calculations remain unchanged.
+## Tests and current stage
 
-External data already acquired and reused: official MBTA feed, 7,877 eligible stops, 1,163 route shapes, SHA-256 `da552d2330c9b85c2ad7ddb5d71012bb9539b2ba5b822d7000d7a3606ec79296`; official cached MAPC GIS domain/metadata sources. No feed refresh was performed during the final product run.
+- Focused regressions for counts, coordinates, coverage, evidence and browser UI passed. Final focused UI run: 19 passed.
+- Final complete fixture-based repository suite: `python -m pytest -q --tb=short` — 151 passed in 11.82 seconds.
+- Regenerated the single map once with `src.pipeline.generate_map`; no legacy reporting/workbook/release workflow ran.
+- Visible Edge generated-map QA: 12 groups passed, no JavaScript errors. Online street tiles loaded; offline HTML, mobile 390x844/360x640, hidden-marker queues/search, all layers, both color/size views, hover scrolling/dismissal and new evidence cards passed.
+- All 10 screenshots reviewed. Text, counts, active sizing legends, parking/restroom explanations and mobile zoom controls are readable and unobstructed.
+- Internal evidence: `cache/validation/interpretation/browser/results.json`, its 10 screenshots, and `cache/validation/interpretation/preservation.json`.
+- Generated HTML: 42,804,139 bytes; no partial map file remains. Only the single map product is in output.
 
-## Warnings and limits
+Initial restricted-environment test attempts were blocked by Windows temporary-directory/browser permissions; normal-access runs passed. A test-file encoding problem and two new test expectations (search case and CSS-uppercase labels) were corrected before the final pass. No unresolved product test failure remains.
 
-Forty records lack usable coordinates; two municipality values are postal-code-like `02176`; four access conflicts remain; some source IDs are absent and deterministic fallback keys cannot guarantee rename continuity. Unknown GIS statuses are excluded under the existing rules. These source conditions remain visible without changing analytical definitions.
+## Open decisions and limitations
 
-Native macOS/Finder execution remains unvalidated. The .command passed POSIX syntax/stub testing on Windows and is recorded executable (100755) in Git. New-machine dependency installation was tested through focused setup/error paths, not a fresh physical machine. Earlier restricted-environment permission failures and QA-harness defects were resolved; no current product test failure remains.
+- Transit policy: the user was asked whether the calculated measure should remain all MBTA modes or become rail-only. No answer was received during implementation. Existing all-mode behavior is preserved and clearly labeled separately from recorded tags. This policy choice is still pending; no assumption that the MAPC source tag has identical scope is made.
+- Mapping supports locations outside the original area, but supplied GIS and MBTA are regional evidence. Other transit providers require a feed integration; configuring wider inventory bounds alone does not establish evidence coverage. GIS coverage/metric CRS must match supplied regional data.
+- Narrative matching remains conservative phrase-based logic; arbitrary descriptions can still require human review.
+- Native macOS validation and a fresh physical-machine dependency install were not performed in this Windows session. Existing launcher implementation was not changed.
 
 ## Exact next step
 
-For staff: replace the sole full CSV in `input/assets/`, double-click the OS launcher, and keep its window open while using the automatically opened map. No release, report inspection or second server command is needed.
-
-For maintainers: native Mac validation can be performed on a Mac when available. Review/commit the saved changes when desired; no commit, push or history reset was performed. The macOS launcher alone is staged to preserve its executable bit. See `notes/map_validation.md` for actual tests and `notes/MAP_HANDOFF.md` for the complete final report.
+Use the current map through the existing launcher. Resolve the outstanding transit scope choice before changing which service modes qualify; no other implementation step from the interpretation fixes remains pending. No commit, push, source overwrite, cleanup rerun or history reset was performed.

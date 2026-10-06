@@ -3,13 +3,15 @@ paths:
   previous_asset_file: null
 coordinates:
   correct_reversed: true
-  allow_outside_study_area: false
+  # Advisory bounds only; valid locations outside remain on the map. Set null for no region check.
   study_area_bounds:
     min_lat: 41.0
     max_lat: 43.0
     min_lon: -73.6
     max_lon: -69.8
 transit:
+  # Evidence scope only. Outside this rectangle proximity is UNKNOWN, not NO.
+  coverage_bounds: {min_lat: 41.0, max_lat: 43.0, min_lon: -73.6, max_lon: -69.8}
   radius_miles: 0.5
   refresh_gtfs: false
   allow_cached_gtfs: true
@@ -17,6 +19,8 @@ transit:
   timeout_seconds: 90
   snapshot_sha256: null
 gis:
+  # Adjust only when supplying verified data for the new area; use a suitable metric CRS.
+  coverage_bounds: {min_lat: 41.0, max_lat: 43.0, min_lon: -73.6, max_lon: -69.8}
   analysis_crs: EPSG:26986
   web_crs: EPSG:4326
   web_simplification_tolerance_m: 5
@@ -24,8 +28,9 @@ gis:
   proximity_radius_miles: 0.5
   walking_public_access: [Public]
 map:
-  size_metric: attribute_count
-  size_thresholds: [0, 3, 6, 9, 12]
+  size_metric: accessibility_feature_count
+  size_thresholds: [0, 1, 2, 3, 5]
+  general_size_thresholds: [0, 3, 6, 9, 12]
   size_radii: [5, 8, 12, 17, 23]
   colors:
     Transit + free parking: '#0077C8'

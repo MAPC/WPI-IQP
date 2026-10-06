@@ -4,7 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .spatial_analysis import asset_points, distance_flag, nearest_geometry, METRES_PER_MILE
+from .spatial_analysis import asset_points, distance_flag, nearest_geometry, METRES_PER_MILE, valid_coordinate_mask
+from .geographic_coverage import coverage_mask
 
 
 def add_transit_proximity(df: pd.DataFrame, bundle: dict | None, config: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -17,11 +18,16 @@ def add_transit_proximity(df: pd.DataFrame, bundle: dict | None, config: dict) -
     out["nearest_transit_distance_miles"] = np.nan
     out["near_public_transit_calculated"] = "UNKNOWN"
     out["transit_calculation_status"] = "official_data_unavailable"
+    crs = config.get("gis", {}).get("analysis_crs", "EPSG:26986")
+    out["transit_calculation_crs"] = crs
+    out["transit_scope"] = "All eligible served MBTA modes in the cached static GTFS"
     if bundle is not None:
-        points = asset_points(out, "EPSG:26986")
-        stops = bundle["stops"].to_crs("EPSG:26986").reset_index(drop=True)
+        covered = coverage_mask(out, config.get("transit", {}))
+        points = asset_points(out.loc[covered], crs)
+        stops = bundle["stops"].to_crs(crs).reset_index(drop=True)
         matches = nearest_geometry(points, stops)
-        out["transit_calculation_status"] = "coordinate_unavailable"
+        out["transit_calculation_status"] = np.where(~valid_coordinate_mask(out), "coordinate_unavailable",
+                                                    np.where(~covered, "outside_evidence_coverage", "no_eligible_stops"))
         out["transit_snapshot_sha256"] = bundle.get("provenance", {}).get("sha256", "")
         if not matches.empty:
             matched_stops = stops.iloc[matches["feature_position"].astype(int)].copy()

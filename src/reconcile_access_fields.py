@@ -42,6 +42,20 @@ def _sentences(text):
     return [clean_token(sentence) for sentence in re.split(r"(?<=[.!?])\s+|[\r\n]+", str(text or "")) if sentence.strip()]
 
 
+def _evidence_clauses(text):
+    # Contrast clauses can describe different places. Keep each assertion scoped.
+    return [clean_token(clause) for sentence in _sentences(text)
+            for clause in re.split(r";\s*(?:however,?\s*)?|\bhowever,?\s*|,\s*but\s+", sentence, flags=re.I)
+            if clause.strip()]
+
+
+def _remote_facility(clause):
+    return bool(re.search(
+        r"\b(?:lead|leads|leading|walk|travel|go)\b.{0,100}\b(?:main|another|different|other) entrance\b"
+        r"|\b(?:at|in|inside|from) (?:an? |the )?(?:another|different|other|nearby) (?:entrance|section|park|station|business|restaurant)\b"
+        r"|\b(?:miles?|kilomet(?:er|re)s?) (?:away|from (?:here|this))\b", clause, re.I))
+
+
 def narrative_evidence(field, text):
     """Return only narrowly explicit positive/negative field assertions.
 
@@ -49,8 +63,10 @@ def narrative_evidence(field, text):
     the half-mile rule; free admission alone never proves free designated parking.
     """
     yes, no = [], []
-    for sentence in _sentences(text):
+    for sentence in _evidence_clauses(text):
         lower = sentence.casefold()
+        if field in ("restrooms_available", "accessible_restroom") and _remote_facility(sentence):
+            continue
         if field == "near_public_transit":
             # Official spatial calculation is the primary independent verification.
             continue
@@ -61,8 +77,8 @@ def narrative_evidence(field, text):
             if positive and re.search(r"\b(?:residents? only|off[- ]season|weekdays? only|except|sometimes)\b", lower):
                 positive = False
         elif field == "accessible_parking":
-            negative = bool(re.search(r"\bno (?:designated |marked )?(?:accessible|handicap(?:ped)?) (?:parking|spaces?)|\b(?:no|without) (?:marked )?access aisles?\b|\b(?:do not|does not|don't|doesn't) (?:include|have) (?:marked )?access aisles?\b|\baccessible parking (?:is )?(?:not available|unavailable|absent)\b", lower))
-            positive = bool(re.search(r"\b(?:accessible|handicap(?:ped)?) (?:parking|spaces?)\b", lower) and re.search(r"\baccess aisles?\b", lower)) and not negative
+            negative = bool(re.search(r"\b(?:no |without |(?:do not|does not|don't|doesn't) (?:have|include) (?:a )?)(?:designated |marked )?(?:accessible|handicap(?:ped)?) (?:parking|spaces?|spots?)\b|\baccessible parking (?:is )?(?:not available|unavailable|absent)\b", lower))
+            positive = bool(re.search(r"\b(?:designated|marked) (?:accessible|handicap(?:ped)?) (?:parking|spaces?|spots?)\b|\b(?:accessible|handicap(?:ped)?) parking (?:spaces? |spots? )?(?:is |are )?(?:available|provided)\b", lower) or (re.search(r"\b(?:accessible|handicap(?:ped)?) (?:parking|spaces?)\b", lower) and re.search(r"\baccess aisles?\b", lower))) and not negative
         elif field == "accessible_restroom":
             negative = bool(re.search(r"\b(?:no|not an?|without an?) (?:accessible|ada[- ](?:accessible|compliant)) (?:restrooms?|bathrooms?|toilets?)\b|\b(?:restrooms?|bathrooms?|toilets?) (?:are |is )?not (?:wheelchair )?accessible\b", lower))
             positive = bool(re.search(r"\b(?:accessible|ada[- ](?:accessible|compliant)) (?:restrooms?|bathrooms?|toilets?)\b|\b(?:restrooms?|bathrooms?) with accessible stalls\b", lower)) and not negative
@@ -136,6 +152,14 @@ def reconcile_access_fields(df, root, config=None):
         row["previous_audit_candidate_names"] = sorted(set(candidates))
         tags = {clean_token(tag).casefold() for tag in row.get("attribute_list", [])}
         narrative = "\n".join(str(row.get(field, "") or "") for field in ["field_description", "accessibility_description"])
+        aisle_quotes = [s for s in _sentences(narrative) if re.search(r"\baccess aisles?\b", s, re.I)]
+        row["accessible_parking_qualification"] = (
+            "Access-aisle observation (separate from the presence of designated spaces; no compliance determination): "
+            + " | ".join(aisle_quotes)) if aisle_quotes else ""
+        remote_quotes = [s for s in _evidence_clauses(narrative)
+                         if _remote_facility(s) and re.search(r"\b(restrooms?|bathrooms?|toilets?)\b", s, re.I)]
+        row["restrooms_available_context_note"] = (
+            "Other-location evidence excluded from this asset's restroom value: " + " | ".join(remote_quotes)) if remote_quotes else ""
         for field, tag in ACCESS_TAGS.items():
             original = "YES" if tag.casefold() in tags else "UNKNOWN"
             audited = original

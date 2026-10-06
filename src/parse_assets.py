@@ -122,7 +122,7 @@ def load_assets(path, config=None, root=None):
             row.update(parse_attributes(row["attributes_raw"], taxonomy))
             row.update(parse_activities(row["activities_raw"]))
             if row.get("municipality") and re.fullmatch(r"\d{5}(?:-\d{4})?",str(row["municipality"])):
-                report["type_inconsistencies"].append({"source_row_number":source_row_number,"field":"municipality","raw_value":row["municipality"],"issue":"Postal-code-like municipality value retained; requires source review."})
+                report["type_inconsistencies"].append({"source_row_number":source_row_number,"field":"municipality","raw_value":row["municipality"],"issue":"The Municipality cell contains a ZIP-code-like value instead of a city or town name. Review that source cell; its value has been kept unchanged."})
             records.append(row)
     frame = pd.DataFrame(records)
     if frame.empty:

@@ -1,3 +1,17 @@
+# Interpretation-fix validation — 2026-10-06
+
+Version 1.2.0. Targeted tests passed before one regenerated-map run. The final repository suite passed **151 tests in 11.82 s**, including **19 browser fixture tests**. Visible Edge generated-map QA passed **12 groups**, online/offline and mobile, with **zero JavaScript errors**. All **10 screenshots** were inspected. Internal results: `cache/validation/interpretation/browser/results.json`; preservation and the 16 explicit assessment-value changes: `cache/validation/interpretation/preservation.json`.
+
+The 211 accepted records, 171 mapped points, 40 missing-coordinate records, all original source/tag values, existing spatial results and transportation profiles reconcile with the baseline. Forty protected input/reference/feed checksums are unchanged. Assessed parking/restroom values intentionally changed under the corrected rules; conflicts now number 1. The map is 42,804,139 bytes, generated once through the current map-only calculation function. No obsolete outputs or partial HTML were created.
+
+Coverage regressions include Boston, Worcester, western Massachusetts, Los Angeles, London, explicitly configured alternate GIS coverage/CRS, disabled coverage, ambiguous coordinate order and invalid coordinates. UI regressions cover independent size/color controls, preserved search/queue/selection, restored sizes, clear tag-versus-calculation labels, previous hover behavior and mobile zoom clearance.
+
+The first sandboxed run failed to create Windows temporary directories/browser pipes; reruns with normal access passed. New test harness expectations for case and Windows encoding were repaired. Native macOS, fresh-machine setup and a rail-only transit definition were not tested or implemented in this update. Existing all-mode MBTA scope remains pending the user's policy choice.
+
+---
+
+## Historical checkpoint (2026-10-01; counts and semantics below are superseded above)
+
 # Final product validation — 2026-10-01
 
 The product is the interactive HTML map and its shared Windows/macOS launch workflow. Development checks do not run during staff launches. No chart, workbook, static-map or release generator was run for this task.

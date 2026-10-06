@@ -31,7 +31,12 @@ def fixture_html(online=False):
         records.append({"key": key, "site_id": "s", "site_name": "Test site", "asset_name": "Validated court" if validated else "Unfinished trail", "municipality": "Town",
                         "coordinate_usable": True,
                         "field_validated": validated, "staff_reviewed": True, "source_line_start": 12, "source_line_end": 14,
-                        "attribute_list": [], "amenity_list": [], "activity_list": [],
+                        "attribute_list": ["Accessible Parking", "Family Friendly", "Lower Visitation", "Free Entry / Parking", "Leashed Dogs Allowed", "Restrooms Available"],
+                        "attribute_count": 6, "accessibility_feature_list": ["Accessible Parking"], "accessibility_feature_count": 1,
+                        "site_characteristic_list": ["Family Friendly", "Lower Visitation"],
+                        "amenity_list": ["Accessible Parking", "Restrooms Available"], "amenity_count": 2, "activity_list": ["Hiking"], "activity_count": 1,
+                        "near_public_transit_original_value": "UNKNOWN", "near_public_transit_calculated": "NO", "near_public_transit_audited_value": "NO",
+                        "transit_calculation_status": "calculated_official_gtfs",
                         "issue_categories": [] if validated else ["field_incomplete"],
                         "issue_reasons": [] if validated else ["Field incomplete"],
                         "management_status": "complete" if validated else "field_incomplete"})
@@ -49,7 +54,8 @@ def fixture_html(online=False):
                            "changes": {"enabled": False},
                            "snapshot": {"gtfs": {"available": True, "retrieved_utc": "2026-09-30T04:00:15Z", "feed_info": [{"feed_start_date": "20260922"}]},
                                         "gis": {"layers": {"bicycle_facilities": {}, "shared_use_paths": {}, "walking_trails": {}}}}}}
-    config = {"online_basemap": online, "size_radii": [5, 8, 12, 17, 23], "size_thresholds": [0, 3, 6, 9, 12],
+    config = {"online_basemap": online, "size_metric": "accessibility_feature_count", "size_radii": [5, 8, 12, 17, 23], "size_thresholds": [0, 1, 2, 3, 5],
+              "general_size_thresholds": [0, 3, 6, 9, 12],
               "colors": {"Transit + free parking": "#0077C8"}}
     replacements = {"__LEAFLET_CSS__": (root / "src/vendor/leaflet.css").read_text(encoding="utf-8"),
                     "__LEAFLET_JS__": (root / "src/vendor/leaflet.js").read_text(encoding="utf-8"),
@@ -423,3 +429,42 @@ def test_expanded_mobile_inventory_keeps_both_zoom_buttons_clear(page, viewport)
     page.wait_for_function("value => map.getZoom() > value && !map._animatingZoom", arg=before, timeout=5000)
     page.click(".leaflet-control-zoom-out")
     page.wait_for_function("value => Math.abs(map.getZoom()-value)<0.001 && !map._animatingZoom", arg=before, timeout=5000)
+
+
+@pytest.mark.parametrize("mode", ["management", "transport"])
+def test_accessibility_size_toggle_preserves_color_filters_selection_and_source(page, mode):
+    page.evaluate("mode=>managementUI.setMode(mode)", mode)
+    page.select_option("#issue-select", "field_incomplete")
+    page.fill("#record-search", "Unfinished")
+    page.evaluate("() => {window.originalRecords=JSON.stringify(managementUI.records);window.originalMap=map;managementUI.selectRecord('b');}")
+    page.locator("#radius-toggle").check()
+    baseline = marker_snapshot(page)
+    assert page.locator("#size-select").input_value() == "accessibility_feature_count"
+    assert page.locator("#size-metric-label").inner_text() == "Recorded accessibility features"
+    assert page.locator("[data-size-count]").inner_text() == "1"
+    assert "Site characteristics" in page.locator("#recorded-inventory").inner_text()
+    assert "Family Friendly" in page.locator("#recorded-inventory").inner_text()
+    page.select_option("#size-select", "attribute_count")
+    after = marker_snapshot(page)
+    assert page.locator("#size-metric-label").inner_text() == "All recorded attributes"
+    assert page.locator("[data-size-count]").inner_text() == "6"
+    assert page.locator("[data-size-label]").inner_text() == "All recorded attributes"
+    for a, b in zip(baseline, after):
+        assert a["visible"] == b["visible"]
+        assert b["style"]["radius"] > a["style"]["radius"]
+        assert {k: v for k, v in a["style"].items() if k != "radius"} == {k: v for k, v in b["style"].items() if k != "radius"}
+    assert page.evaluate("managementUI.state.issue==='field_incomplete' && managementUI.state.search==='Unfinished' && managementUI.state.selected==='b' && managementUI.state.radius")
+    assert page.locator("#radius-toggle").is_checked()
+    assert page.evaluate("assetMarkers[1].getTooltip().getContent().includes('All recorded attributes')")
+    page.select_option("#size-select", "accessibility_feature_count")
+    assert marker_snapshot(page) == baseline
+    assert page.evaluate("JSON.stringify(managementUI.records)===originalRecords && map===originalMap")
+
+
+def test_drawer_distinguishes_unrecorded_tag_from_calculated_no(page):
+    page.evaluate("managementUI.selectRecord('a')")
+    card = page.locator('[data-access-field="near_public_transit"]')
+    assert card.locator('[data-value="source"]').inner_text() == "Not recorded"
+    assert card.locator('[data-value="audited"]').inner_text() == "NO"
+    assert "calculated mbta proximity" in card.inner_text().lower()
+    assert "not a live service check" in card.inner_text()

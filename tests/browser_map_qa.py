@@ -134,6 +134,38 @@ def run_browser_qa(root, *, headed=False, online=False, artifacts=None):
                 passed("Street basemap loads in a real visible browser")
             shot("01_management")
 
+            step = "Accessibility and general attribute sizing"
+            assert page.locator("#size-select").input_value() == "accessibility_feature_count"
+            assert ev("assetMarkers.every(m=>{const r=managementUI.recordLookup.get(m.recordKey);return r.accessibility_feature_count===r.accessibility_feature_list.length && m.getRadius()===[5,8,12,17,23][r.accessibility_feature_count>=5?4:r.accessibility_feature_count>=3?3:r.accessibility_feature_count>=2?2:r.accessibility_feature_count>=1?1:0];})")
+            page.select_option("#size-select", "attribute_count")
+            assert "All recorded attributes" in page.locator("#size-metric-label").inner_text()
+            assert ev("assetMarkers.every(m=>{const r=managementUI.recordLookup.get(m.recordKey);return m.getRadius()===[5,8,12,17,23][r.attribute_count>=12?4:r.attribute_count>=9?3:r.attribute_count>=6?2:r.attribute_count>=3?1:0];})")
+            general = ev(styles)
+            for a, b in zip(baseline, general):
+                assert {k:v for k,v in a.items() if k!="radius"} == {k:v for k,v in b.items() if k!="radius"}
+            shot("08_general_attribute_sizes")
+            page.select_option("#size-select", "accessibility_feature_count")
+            assert ev(styles) == baseline
+            passed("Accessibility sizing defaults to seven eligible tag types; general sizing changes radii/legend only and restores without refresh")
+
+            step = "Parking and location-scoped restroom evidence"
+            ames = next(r for r in records if r["asset_name"]=="Ames Long Pond")
+            gilbert = next(r for r in records if r["asset_name"]=="F. Gilbert Hills State Forest OHV Parking")
+            assert ames["accessible_parking"] == "YES"
+            assert ames["accessible_parking_verification_status"] == "field_narrative_verified"
+            assert gilbert["restrooms_available"] == "NO"
+            assert gilbert["restrooms_available_original_value"] == "UNKNOWN"
+            assert "access_conflict" not in gilbert["issue_categories"]
+            for record, field, expected, shot_name in [(ames,"accessible_parking","YES","09_ames_parking"),(gilbert,"restrooms_available","NO","10_gilbert_restrooms")]:
+                ev("key=>managementUI.selectRecord(key)", record["key"])
+                card = page.locator(f'[data-access-field="{field}"]')
+                card.scroll_into_view_if_needed()
+                assert card.locator('[data-value="audited"]').inner_text() == expected
+                assert card.locator(".evidence-context").is_visible()
+                shot(shot_name)
+                page.locator("#drawer-close").click()
+            passed("Ames retains designated parking and separate aisle concern; Gilbert excludes remote restrooms and resolves local absence")
+
             step = "Review queues and searches"
             for issue in issue_select.locator("option:not([disabled])").evaluate_all("items=>items.map(item=>item.value)"):
                 issue_select.select_option(issue)
@@ -184,8 +216,8 @@ def run_browser_qa(root, *, headed=False, online=False, artifacts=None):
                 assert "site collection progress" in page.locator("#drawer-body").inner_text().lower(), "Site progress is missing from details"
                 for item in evidence["access_evidence"]:
                     card = page.locator(f'[data-access-field="{item["field"]}"]')
-                    assert card.locator('[data-value="source"]').inner_text() == str(item["original_value"] or "Unknown")
-                    assert card.locator('[data-value="audited"]').inner_text() == str(item["audited_value"] or "Unknown")
+                    assert card.locator('[data-value="source"]').inner_text() == ("Present" if item["original_value"] == "YES" else "Not recorded")
+                    assert card.locator('[data-value="audited"]').inner_text() == str((evidence.get("near_public_transit_calculated", "UNKNOWN") if item["field"] == "near_public_transit" else item["audited_value"]) or "Unknown")
                 shot("03_details_evidence")
                 page.locator("#drawer-close").click()
             colocated = ev("() => {const m=assetMarkers.find(a=>assetMarkers.some(b=>b!==a&&a.getLatLng().distanceTo(b.getLatLng())<1));return m?m.recordKey:null;}")
