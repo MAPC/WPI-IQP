@@ -1,4 +1,18 @@
-# MAPC interpretation update — 2026-10-06
+# MAPC transit-definition handoff — 2026-10-06
+
+The remaining transit feature is complete. In the expanded left panel, **Calculated transit** switches between **All MBTA modes** (default) and **T / rail**. The user explicitly defined T / rail as subway / rapid transit plus light rail, excluding commuter rail (GTFS types 0 and 1). The all-mode snapshot includes Bus, Silver Line, Rapid transit, Light rail, Commuter rail and Ferry; trolleybus remains eligible if present. Neither option adds other providers.
+
+Both calculations use the same cached feed, served-stop/parent eligibility, evidence coverage, projected distances and inclusive 0.5-mile threshold. Recorded tags and assessed parking remain unchanged. The selector updates transportation colors, legend, hover and details immediately while preserving management colors, filters, size, layers and the current page. Unavailable calculations remain UNKNOWN without a recorded-tag fallback.
+
+Current results: T / rail **35 YES / 136 NO / 40 UNKNOWN**; All MBTA **96 YES / 75 NO / 40 UNKNOWN**. Transit differs for 61 records; transportation profiles differ for 38. Inventory remains 211 accepted, 171 mapped and 40 without coordinates. Source CSV and preserved all-mode/source fields match the prior snapshot.
+
+Validation: **31 unique focused tests passed across the initial run and repaired-fixture rerun**; four real generated-map browser groups passed with zero JavaScript errors; all five final screenshots were reviewed. The actual Windows launcher generated the map once, opened the browser and served the current HTML successfully. Only `output/maps/MAPC_access_map.html` is produced. No full historical audit or additional output generation ran. Native macOS remains untested here.
+
+Changed: `src/transit_data.py`, `src/transit_analysis.py`, `src/map_ui.html`, `tests/test_transit_definitions.py`, `tests/test_map_ui.py`, README and the interpretation/progress/handoff notes. Full validation details are in `WORK_PROGRESS.md`; internal evidence is in `cache/validation/transit_definitions/`. No transit-definition decision remains open.
+
+---
+
+# Historical interpretation update — 2026-10-06 (before the transit selector)
 
 Version 1.2.0 is implemented and validated. The prior launcher/cleanup work was preserved. Accessibility-only default sizing, optional all-attribute sizing, clearer tag/evidence labels and subset lists, parking/aisle separation, remote-restroom scoping, advisory inventory bounds and independent evidence coverage are complete.
 

@@ -72,11 +72,20 @@ def parse_gtfs(path: Path) -> dict:
         eligible = stops[(stops["stop_id"].isin(boarders["stop_id"])) |
                          (location.eq("1") & stops["stop_id"].isin(parents))].copy()
         served["mode"] = served["route_id"].map(route_index["mode"]).fillna("Other transit")
+        served["route_type"] = served["route_id"].map(route_index["route_type"]).fillna("")
         served["route_label"] = served["route_id"].map(route_index["route_label"]).fillna(served["route_id"])
         mode_by_stop = served.groupby("stop_id")["mode"].agg(lambda values: " | ".join(sorted(set(values))))
         route_by_stop = served.groupby("stop_id")["route_label"].agg(lambda values: " | ".join(sorted(set(values))))
         eligible["mode"] = eligible["stop_id"].map(mode_by_stop).fillna("Other transit")
         eligible["routes"] = eligible["stop_id"].map(route_by_stop).fillna("")
+        # User-defined T / rail scope: light rail (0) and rapid transit (1), not commuter rail (2).
+        # Parent stations inherit only the modes actually linked through served boarding stops.
+        types_by_stop = served.groupby("stop_id")["route_type"].agg(lambda values: " | ".join(sorted(set(values))))
+        rail = served[served["route_type"].isin(["0", "1"])]
+        eligible["route_types"] = eligible["stop_id"].map(types_by_stop).fillna("")
+        for target, source in (("t_rail_mode", "mode"), ("t_rail_routes", "route_label")):
+            values = rail.groupby("stop_id")[source].agg(lambda items: " | ".join(sorted(set(items))))
+            eligible[target] = eligible["stop_id"].map(values).fillna("")
         eligible["stop_lat"] = pd.to_numeric(eligible["stop_lat"], errors="coerce")
         eligible["stop_lon"] = pd.to_numeric(eligible["stop_lon"], errors="coerce")
         coordinate_ok = eligible["stop_lat"].between(-90, 90) & eligible["stop_lon"].between(-180, 180)

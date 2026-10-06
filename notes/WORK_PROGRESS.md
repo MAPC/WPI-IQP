@@ -1,4 +1,38 @@
-# Work progress — interpretation fixes
+# Work progress — transit definitions complete
+
+Updated 2026-10-06. This checkpoint supersedes the transit-policy question in the historical interpretation checkpoint below. Version 1.2.0, completed cleanup, accessibility sizing, evidence fixes and the map-only launcher remain intact.
+
+## Completed transit implementation
+
+- The user explicitly selected subway / rapid transit and light rail only for **T / rail**, excluding commuter rail. Eligible GTFS route types are 0 and 1; served parent stations inherit those qualifying routes.
+- **All MBTA modes** remains the default and retains the existing served-stop eligibility. The current snapshot represents Bus, Silver Line, Rapid transit, Light rail, Commuter rail and Ferry; trolleybus remains eligible if present. Other providers are not added.
+- Both nearest-stop calculations and transportation profiles are embedded in the single HTML. The selector immediately updates transportation colors, legend, hover, calculated evidence and spatial details. Management colors, source tags, queue/search, size selection, GIS layers, selected record and the existing page/map are preserved.
+- Both definitions retain the same projected-distance method, inclusive 0.5-mile threshold, cached feed and coverage rules. Missing coordinates or unavailable/out-of-coverage evidence stay UNKNOWN. The selected profile uses calculated transit with unchanged assessed free entry / parking, without substituting the recorded transit tag.
+
+## Current counts and preservation
+
+211 accepted records, 171 mapped and 40 without usable coordinates remain unchanged. T / rail: **35 YES, 136 NO, 40 UNKNOWN**. All MBTA: **96 YES, 75 NO, 40 UNKNOWN**. There are 61 differing transit results and 38 differing transportation profiles.
+
+Compared with the saved pre-generation HTML, accepted identities, original transit tag values, existing all-mode results and nearest distances, feed checksum, coordinates, attribute lists, parking values, accessibility counts and management statuses are unchanged. The source CSV checksum also matches. No external feed refresh was performed; both definitions use cached GTFS SHA-256 `da552d2330c9b85c2ad7ddb5d71012bb9539b2ba5b822d7000d7a3606ec79296`.
+
+## Changed files and validation
+
+- Implementation: `src/transit_data.py`, `src/transit_analysis.py`, `src/map_ui.html`.
+- Tests: `tests/test_transit_definitions.py` (new), `tests/test_map_ui.py`.
+- Documentation: `README.md`, `notes/INTERPRETATION_REVIEW.md`, this progress note and `notes/MAP_HANDOFF.md`.
+- Product regenerated once through the real Windows `Run_MAPC_Tool.bat`: `output/maps/MAPC_access_map.html`. The launcher completed generation, invoked the default browser and served the exact generated HTML. No historical report/workbook/release workflow ran.
+- Targeted pytest selection: transit parsing/cache and new definition cases; half-mile boundary; transit reconciliation and HTML-only product tests; selector preservation in both color modes; recorded/calculated labels; mobile zoom controls. Initial selection had 29 passing tests and two new browser cases failing because the test fixture redeclared the global DATA on the same page. The fixture now opens a fresh document before loading its alternate content; the two failed cases passed on rerun. **31 unique focused tests passed across these runs.** No full repository audit was rerun.
+- Real generated-map browser pass: four focused groups passed, **zero JavaScript errors**. Both transit views and their colors/details restore correctly; filters, size, management colors and layers persist without refresh. Mobile selector and zoom controls pass. Online tiles: 28 loaded, zero errors.
+- All five final screenshots were visually reviewed: both full-map definitions, both details states and mobile. No additional visual correction was needed.
+- Internal validation evidence: `cache/validation/transit_definitions/comparison.json`, `browser_results.json`, and five screenshots. These maintenance artifacts are outside product output.
+
+## Remaining limitations and next step
+
+No transit-definition implementation or policy decision remains pending. Use **Calculated transit** in the expanded management panel to compare definitions. Other transit providers require additional integration; straight-line proximity is not a walking route, frequency or accessible-entrance guarantee. Native macOS and a fresh-machine dependency install were not tested in this Windows task. Output remains only the generated HTML.
+
+---
+
+# Historical checkpoint — interpretation fixes (before the transit selector)
 
 Updated 2026-10-06, version 1.2.0. Implementation, targeted tests, generated-map browser QA and final repository tests are complete. This checkpoint supersedes the 2026-10-01 progress entry; the previous map-only product and cleanup were preserved.
 

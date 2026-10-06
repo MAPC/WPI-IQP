@@ -24,7 +24,7 @@ def browser():
         launched.close()
 
 
-def fixture_html(online=False):
+def fixture_html(online=False, transit_difference=False):
     root = Path(__file__).resolve().parents[1]
     records = []
     for key, validated in [("a", True), ("b", False)]:
@@ -37,9 +37,16 @@ def fixture_html(online=False):
                         "amenity_list": ["Accessible Parking", "Restrooms Available"], "amenity_count": 2, "activity_list": ["Hiking"], "activity_count": 1,
                         "near_public_transit_original_value": "UNKNOWN", "near_public_transit_calculated": "NO", "near_public_transit_audited_value": "NO",
                         "transit_calculation_status": "calculated_official_gtfs",
+                        "free_entry_parking": "YES", "near_t_rail_calculated": "NO",
+                        "transportation_profile_all_mbta": "Free parking only", "transportation_profile_t_rail": "Free parking only",
+                        "t_rail_calculation_status": "calculated_official_gtfs",
                         "issue_categories": [] if validated else ["field_incomplete"],
                         "issue_reasons": [] if validated else ["Field incomplete"],
                         "management_status": "complete" if validated else "field_incomplete"})
+    if transit_difference:
+        records[1].update(near_public_transit_calculated="YES", transportation_profile_all_mbta="Transit + free parking",
+                          nearest_transit_stop="Nearby bus", nearest_transit_mode="Bus", nearest_transit_distance_miles=.1,
+                          nearest_t_rail_stop="Distant subway", nearest_t_rail_mode="Rapid transit", nearest_t_rail_distance_miles=1.2)
     markers = [{"key": row["key"], "validated": row["field_validated"], "lat": 42. + index * .01, "lon": -71.,
                 "radius": 8, "color": "#0077C8", "tooltip": "test"} for index, row in enumerate(records)]
     records.append({"key": "unmapped", "site_id": "s", "site_name": "Test site", "asset_name": "Unmapped asset", "municipality": "Town",
@@ -56,7 +63,7 @@ def fixture_html(online=False):
                                         "gis": {"layers": {"bicycle_facilities": {}, "shared_use_paths": {}, "walking_trails": {}}}}}}
     config = {"online_basemap": online, "size_metric": "accessibility_feature_count", "size_radii": [5, 8, 12, 17, 23], "size_thresholds": [0, 1, 2, 3, 5],
               "general_size_thresholds": [0, 3, 6, 9, 12],
-              "colors": {"Transit + free parking": "#0077C8"}}
+              "colors": {"Transit + free parking": "#0077C8", "Transit only": "#FFB000", "Free parking only": "#C2187A", "Neither": "#3D4650", "Unknown / unresolved": "#AAB4BE"}}
     replacements = {"__LEAFLET_CSS__": (root / "src/vendor/leaflet.css").read_text(encoding="utf-8"),
                     "__LEAFLET_JS__": (root / "src/vendor/leaflet.js").read_text(encoding="utf-8"),
                     "__MAP_DATA__": json.dumps(data), "__MAP_CONFIG__": json.dumps(config)}
@@ -466,5 +473,58 @@ def test_drawer_distinguishes_unrecorded_tag_from_calculated_no(page):
     card = page.locator('[data-access-field="near_public_transit"]')
     assert card.locator('[data-value="source"]').inner_text() == "Not recorded"
     assert card.locator('[data-value="audited"]').inner_text() == "NO"
-    assert "calculated mbta proximity" in card.inner_text().lower()
+    assert "calculated all-mbta proximity" in card.inner_text().lower()
     assert "not a live service check" in card.inner_text()
+
+
+@pytest.mark.parametrize("color_mode", ["management", "transport"])
+def test_transit_selector_preserves_inventory_filters_size_and_layers_without_refresh(page, color_mode):
+    page.goto("about:blank")
+    page.set_content(fixture_html(transit_difference=True), wait_until="load")
+    page.wait_for_function("window.mapReady===true")
+    page.evaluate("mode=>managementUI.setMode(mode)", color_mode)
+    page.select_option("#issue-select", "field_incomplete")
+    page.fill("#record-search", "Unfinished")
+    page.select_option("#size-select", "attribute_count")
+    page.evaluate("managementUI.selectRecord('b')")
+    page.locator("#radius-toggle").check()
+    page.evaluate("""() => {
+      Object.values(mapLayers).forEach(l=>l.addTo(map));
+      window.transitBefore={map,document,records:JSON.stringify(DATA),queue:JSON.stringify(managementUI.state.queue),
+        layers:Object.values(mapLayers).map(l=>map.hasLayer(l))};
+    }""")
+    before = marker_snapshot(page)
+    card = page.locator('[data-access-field="near_public_transit"]')
+    assert card.locator('[data-value="source"]').inner_text() == "Not recorded"
+    assert card.locator('[data-value="audited"]').inner_text() == "YES"
+    navigations=[]
+    page.on("framenavigated", lambda frame:navigations.append(frame.url))
+    page.select_option("#transit-select", "t_rail")
+    assert card.locator('[data-value="source"]').inner_text() == "Not recorded"
+    assert card.locator('[data-value="audited"]').inner_text() == "NO"
+    assert "Calculated T / rail proximity" in card.text_content()
+    assert "commuter rail excluded" in page.locator("#transit-definition-note").inner_text()
+    assert "Distant subway" in page.locator("#transit-spatial").inner_text()
+    assert "Free parking only" in page.locator("#transit-spatial").inner_text()
+    assert page.evaluate("managementUI.markerLookup.get('b').getTooltip().getContent().includes('Calculated T / rail proximity: NO')")
+    after = marker_snapshot(page)
+    if color_mode == "transport":
+        assert before[1]["style"]["fillColor"] == "#0077C8"
+        assert after[1]["style"]["fillColor"] == "#C2187A"
+        assert "T / rail" in page.locator("#legend-explanation").inner_text()
+    else:
+        assert before == after
+    assert [r["visible"] for r in before] == [r["visible"] for r in after]
+    assert [r["style"]["radius"] for r in before] == [r["style"]["radius"] for r in after]
+    assert page.locator("#issue-select").input_value() == "field_incomplete"
+    assert page.locator("#record-search").input_value() == "Unfinished"
+    assert page.locator("#size-select").input_value() == "attribute_count"
+    assert page.locator("#radius-toggle").is_checked()
+    assert page.evaluate("""map===transitBefore.map && document===transitBefore.document && JSON.stringify(DATA)===transitBefore.records &&
+      JSON.stringify(managementUI.state.queue)===transitBefore.queue &&
+      JSON.stringify(Object.values(mapLayers).map(l=>map.hasLayer(l)))===JSON.stringify(transitBefore.layers)""")
+    page.select_option("#transit-select", "all_mbta")
+    assert marker_snapshot(page) == before
+    assert card.locator('[data-value="audited"]').inner_text() == "YES"
+    assert "Nearby bus" in page.locator("#transit-spatial").inner_text()
+    assert navigations == []

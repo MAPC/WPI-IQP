@@ -42,7 +42,8 @@ The current source CSV is authoritative for recorded values. Prior audits are ev
 
 ## Using the map
 
-- **Inventory management** colors records by explicit workflow and evidence issues. **Transportation profile** colors them by final reconciled transit and combined free entry / parking values.
+- **Inventory management** colors records by explicit workflow and evidence issues. **Transportation profile** colors them by the selected calculated transit definition and assessed combined free entry / parking values.
+- **Calculated transit** defaults to **All MBTA modes**. Select **T / rail** for subway and light rail only, excluding commuter rail. Transportation colors, legend, hover and details update immediately without resetting search, review queue, circle size or layers. Recorded source tags remain separate.
 - **Circle size** defaults to recorded accessibility features. Switch to **All recorded attributes** for the broader tag count. This is independent of color mode, search and review queues; the legend and details counts follow your choice.
 - **Search** covers site, asset and municipality. It intersects with the selected **Review Queue**. Nonmatching asset markers are removed from the display completely; opacity does not represent a filter mismatch.
 - The **Review Queue dropdown** is the only queue selector. Select **All inventory records** and clear search to restore every mapped record immediately, without refreshing. Clearing search alone restores records allowed by the current queue.
@@ -127,7 +128,14 @@ Only verified Existing infrastructure with eligible geometry and known required 
 
 The official source is `https://cdn.mbta.com/MBTA_GTFS.zip`. The cache keeps the exact feed ZIP, SHA-256, retrieval details and feed validity metadata. Normal runs reuse a verified cached feed. Maintainers can deliberately refresh with `transit.refresh_gtfs` or pin a feed with `transit.snapshot_sha256` in `config/config.yaml`; a feed update changes the evidence. Preserve `cache/transit/` when moving the complete project.
 
-Scheduled boarding stops and their parent stations are eligible across the feed's validity period. Modes include represented bus, rapid transit, light rail, Silver Line, commuter rail and ferry service. The drawer shows **Calculated MBTA proximity** separately from the recorded tag. The broader all-mode calculation is not labeled a correction to MAPC’s tagging policy. Whether the intended MAPC tag is rail-only remains a policy question; the existing all-mode calculation has been preserved pending that decision. If official data is unavailable or the location is outside evidence coverage, calculated transit remains UNKNOWN and recorded MAPC evidence is preserved. The transportation profile continues to use calculated proximity where known and retained recorded evidence otherwise. An unavailable feed is not a calculated NO.
+Scheduled boarding stops and their parent stations are eligible across the feed's validity period. Both calculations use the same cached feed, coordinate and evidence-coverage rules, projected distances and inclusive 0.5-mile threshold:
+
+- **T / rail:** subway / rapid transit and light rail (GTFS route types 1 and 0). Commuter rail is excluded by the user's explicit definition; buses, Silver Line and ferries are also excluded. Parent stations qualify through their eligible served boarding stops.
+- **All MBTA modes (default):** the existing eligible served-stop set. This snapshot represents Bus, Silver Line, Rapid transit, Light rail, Commuter rail and Ferry; trolleybus qualifies if represented in a compatible feed. This does not automatically include other transit providers.
+
+The drawer keeps **Recorded Attributes tag: Present / Not recorded** separate from the selected calculated YES / NO / UNKNOWN, nearest stop, distance and feed provenance. Neither calculation overwrites that tag or claims to redefine MAPC's tagging policy. Missing usable coordinates, unavailable official evidence or locations outside transit evidence coverage produce calculated UNKNOWN, never a calculated NO. The selected transportation profile uses that calculation and the unchanged assessed free entry / parking value; it does not substitute the recorded transit tag when the calculation is unknown.
+
+In the current inventory, T / rail gives **35 YES, 136 NO, 40 UNKNOWN**; All MBTA modes gives **96 YES, 75 NO, 40 UNKNOWN**. The transit result differs for 61 records. These are snapshot results, not fixed targets.
 
 ### Management rules and optional historical evidence
 

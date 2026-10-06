@@ -1,6 +1,6 @@
 # Interpretation questions and requested corrections
 
-Recorded 2026-10-06 from the user's map review. These requirements are being implemented on 2026-10-06. Implementation and validation are complete: 151 repository tests, 12 generated-map browser QA groups and 10 reviewed screenshots. Transit scope remains the one open policy choice. See WORK_PROGRESS.md for the final checkpoint.
+Recorded 2026-10-06 from the user's map review. The initial interpretation fixes passed 151 repository tests, 12 generated-map browser QA groups and 10 reviewed screenshots. The subsequent transit definition choice is now resolved and implemented, with separate focused validation described in WORK_PROGRESS.md. Original problem descriptions below are retained as request history.
 
 ## Urgent: use across municipalities and configurable geographic coverage
 
@@ -41,8 +41,12 @@ Status: implemented. Default accessibility-only size and optional all-attributes
 - Inventory labels: features means recorded Attributes; Activities do not control circle size. Site-characteristic tags are displayed under Recorded attributes/features, with no separate characteristics panel. Classified amenities is a configured subset of Attributes, not a scan of description paragraphs or a count of unique facilities.
 - Current checkbox export contains checked and blank values only; generic parser support for explicit false does not mean the current export contains explicit negatives.
 
-Implementation now changes the requested coordinate acceptance, accessibility sizing, narrative evidence and display terminology. Source data is unchanged. The transit-policy decision remains open; the existing all-mode calculation is retained and labeled separately instead of asserting corrections to the source tagging policy.
+Implementation changes the requested coordinate acceptance, accessibility sizing, narrative evidence and display terminology. Source data is unchanged. Transit now offers two separately calculated definitions while retaining the recorded tag; it does not assert corrections to the source tagging policy.
 
 ## Final disposition — 2026-10-06
 
-Parking/aisle separation, location-aware restroom evidence, source/tag terminology, inventory subsets and checked/blank explanations are implemented. The original problem descriptions above are retained as request history. Transit mode policy is the only open decision: preserve all MBTA modes unless the user explicitly selects rail-only. Other providers and arbitrary language understanding are limitations, not silently claimed capabilities. Full results and file list are in WORK_PROGRESS.md.
+Parking/aisle separation, location-aware restroom evidence, source/tag terminology, inventory subsets and checked/blank explanations are implemented. The original problem descriptions above are retained as request history.
+
+Transit definition is resolved: the user explicitly chose **subway + light rail only; exclude commuter rail** for T / rail. The selector now offers that calculation and the preserved All MBTA modes calculation (default). Both use the same eligible-stop rules, cached feed, coverage gates and inclusive 0.5-mile straight-line threshold. Source tags remain unchanged and separate. Current YES counts are 35 and 96 respectively, with 61 differing results and 40 UNKNOWN in both. Focused transit/UI/product checks and generated-map browser QA passed. There is no unresolved transit-definition question.
+
+Other transit providers and arbitrary language understanding remain limitations. Full results and file list are in WORK_PROGRESS.md.
